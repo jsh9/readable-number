@@ -1,0 +1,17 @@
+repos:
+  - repo: https://github.com/jsh9/cercis
+    rev: main
+    hooks:
+      - id: cercis
+        args: [
+          --function-definition-extra-indent=True,
+          --single-quote=True,
+        ]
+  - repo: https://github.com/jsh9/cercis
+    rev: main
+    hooks:
+      - id: cercis-jupyter
+        args: [
+          --function-definition-extra-indent=True,
+          --single-quote=True,
+        ]
