@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath('../'))
 project = 'readable_number'
 
 # The full version, including alpha/beta/rc tags
-release = 'v0.1.1'
+release = 'v0.1.2'
 
 
 # -- General configuration ---------------------------------------------------
