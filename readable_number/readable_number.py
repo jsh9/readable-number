@@ -33,8 +33,11 @@ class ReadableNumber:
 
     Parameters
     ----------
-    num : numbers.Real
-        A number to be printed in a readable format.
+    num : numbers.Real or None
+        A number to be printed in a readable format.  If ``None``, it
+        means you are only initializing an "empty" object with printing
+        options. In that case, you can use the `of()` method later to
+        print the readable result.
     digit_group_size : int
         The size of the digit group (in the integer part).  For example,
         if 3, the number 123456789 will be printed as 123,456,789.
@@ -66,16 +69,30 @@ class ReadableNumber:
         etc. Currently, the largest supported unit is T (trillion). Numbers
         whose absolute values are larger than 1,000 trillion will be
         printed as something like "1535663T".
+    use_exponent_for_large_numbers : bool
+        Whether to use exponential notation (such as 1.2e+05) to represent
+        large numbers. Default: False.
+    large_number_threshold : int
+        If ``num``'s absolute value is beyond (≥) this cutoff value, we
+        consider it a large number. Default: 1,000,000.
+    use_exponent_for_small_numbers : bool
+        Whether to use exponential notation (such as 1.2e-05) to represent
+        small numbers. Default: False.
+    small_number_threshold : float
+        If ``num``'s absolute value is blow (≤) this cutoff value, we
+        consider it to be a small number. Default: 1 × 10⁻⁶.
 
     Examples
     --------
     >>> from readable_number import ReadableNumber
     >>> str(ReadableNumber(1234.567))
+    >>> rn = ReadableNumber()  # alternative way to print numbers
+    >>> rn.of(1234.567)
     """
 
     def __init__(
             self,
-            num: numbers.Real,
+            num: Optional[numbers.Real] = None,
             digit_group_size: int = 3,
             digit_group_delimiter: str = ',',
             decimal_symbol: str = '.',
@@ -83,10 +100,11 @@ class ReadableNumber:
             show_decimal_part_if_integer: bool = False,
             use_shortform: bool = False,
             use_exponent_for_large_numbers: bool = False,
+            large_number_threshold: int = 1_000_000,
             use_exponent_for_small_numbers: bool = False,
-    ):
-
-        self.num: numbers.Real = self._convert_to_num(num)
+            small_number_threshold: float = 1e-6,
+    ) -> None:
+        self.num: Optional[numbers.Real] = self._convert_to_num(num)
         self.digit_group_length = digit_group_size
         self.digit_group_delimiter = digit_group_delimiter
         self.decimal_symbol = decimal_symbol
@@ -94,7 +112,9 @@ class ReadableNumber:
         self.show_decimal_part_if_integer = show_decimal_part_if_integer
         self.use_shortform = use_shortform
         self.use_exponent_for_large_numbers = use_exponent_for_large_numbers
+        self.large_number_threshold = large_number_threshold
         self.use_exponent_for_small_numbers = use_exponent_for_small_numbers
+        self.small_number_threshold = small_number_threshold
 
         self._validate_input_params()
 
@@ -102,28 +122,36 @@ class ReadableNumber:
         return str(self.num)
 
     def __str__(self):
+        if self.num is None:
+            raise ValueError(
+                'Please initialize the object with an actual number,'
+                ' or use the `of()` method to pass in a number.',
+            )
+
         if not math.isfinite(self.num):
             return str(self.num)
 
-        if self.use_exponent_for_small_numbers and 0 < abs(self.num) <= 1e-6:
-            return f'{self.num:e}'
+        if (
+            self.use_exponent_for_small_numbers
+            and 0 < abs(self.num) <= self.small_number_threshold
+        ):
+            return self._render_number_in_exponential()
 
-        if self.use_exponent_for_large_numbers and abs(self.num) >= 1e6:
-            return f'{self.num:e}'
+        if (
+            self.use_exponent_for_large_numbers
+            and abs(self.num) >= self.large_number_threshold
+        ):
+            return self._render_number_in_exponential()
 
         self.num_parts = self._get_integer_and_decimal_parts(self.num)
 
-        if (
-                self.use_shortform
-                and abs(self.num_parts.integer_part_int) > 1_000
-        ):
+        if self.use_shortform and abs(self.num_parts.integer_part_int) > 1_000:
             return self._render_integer_part_with_shortform()
 
         if self._is_integer():
             if self.show_decimal_part_if_integer:
                 decimal_part = (
-                    '00' if self.precision is None
-                    else '0'.zfill(self.precision)
+                    '00' if self.precision is None else '0'.zfill(self.precision)
                 )
                 return (
                     self._render_integer_part_in_groups()
@@ -146,6 +174,31 @@ class ReadableNumber:
             + decimal_part
         )
 
+    def of(self, num: numbers.Real) -> str:
+        """
+        Print the number ``num`` in a readable format.  This method is
+        useful when you don't want to repeatedly specify the same options
+        when printing many numbers.
+
+        Parameters
+        ----------
+        num : numbers.Real
+            The number to be printed
+
+        Returns
+        -------
+        str
+            The number in a readable format
+
+        Examples
+        --------
+        >>> from readable_number import ReadableNumber
+        >>> rn = ReadableNumber()
+        >>> rn.of(1234.567)
+        """
+        self.num = num
+        return self.__str__()
+
     def _validate_input_params(self) -> None:
         if not isinstance(self.digit_group_length, int):
             raise TypeError('`digit_group_size` not an integer')
@@ -167,10 +220,7 @@ class ReadableNumber:
             msg = 'Using "-" as `decimal_symbol` can cause ambiguity'
             raise ValueError(msg)
 
-        if (
-            self.precision is not None
-            and not isinstance(self.precision, int)
-        ):
+        if self.precision is not None and not isinstance(self.precision, int):
             msg = '`precision` not None and not int'
             raise TypeError(msg)
 
@@ -188,6 +238,17 @@ class ReadableNumber:
 
         if not isinstance(self.use_exponent_for_small_numbers, bool):
             raise TypeError('`use_exponent_for_small_numbers` not a boolean')
+
+    def _render_number_in_exponential(self) -> str:
+        if self.precision is not None:
+            return f'{self.num:.{self.precision}e}'
+
+        temp_result = f'{self.num:.16e}'  # 16: max precision in 64-bit system
+        base_part_str, exp_part_str = temp_result.split('e')
+        base_part_float = float(base_part_str)
+        assert abs(base_part_float) < 10, 'Internal error; please contact the authors'
+        processed = str(ReadableNumber(base_part_float, precision=None))
+        return processed + 'e' + exp_part_str
 
     def _render_integer_part_with_shortform(self) -> str:
         num_digits = len(str(abs(self.num_parts.integer_part_int)))
@@ -219,10 +280,7 @@ class ReadableNumber:
         for char in integer_part_str[::-1]:
             counter += 1
             new_chars.append(char)
-            if (
-                    self.digit_group_length > 0
-                    and counter % self.digit_group_length == 0
-            ):
+            if self.digit_group_length > 0 and counter % self.digit_group_length == 0:
                 new_chars.append(self.digit_group_delimiter)
 
         if new_chars[-1] == '-' and new_chars[-2] == self.digit_group_delimiter:
@@ -263,7 +321,7 @@ class ReadableNumber:
 
     @classmethod
     def _convert_to_num(cls, num: Any) -> numbers.Real:
-        if isinstance(num, (float, int)):
+        if isinstance(num, (float, int, type(None))):
             return num
 
         if isinstance(num, complex):
