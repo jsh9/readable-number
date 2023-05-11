@@ -1,11 +1,15 @@
+import numbers
+
 import pytest
 from readable_number import ReadableNumber
+
+from typing import Optional, Any, Dict
 
 comma = ','
 dot = '.'
 space = ' '
 
-long_num = 1.1234567890123456789012345
+long_num: float = 1.1234567890123456789012345
 
 test_cases = [
     # fmt: off
@@ -135,7 +139,9 @@ test_cases = [
     (1_234_567_890_123, '1.235T', 3, comma, dot, 3, True, True),
     (123_456_789_234_567_890_123, '123456789.235T', 3, comma, dot, 3, False, True),
     (-12345678, '-12,345,678.000', 3, comma, dot, 3, True, False),
-    (-12345678, '-12,345,678', 3, comma, dot, 3, False, False),
+    (-12345678.0, '-12,345,678.000', 3, comma, dot, 3, True, False),
+    (-12345678.0, '-12,345,678', 3, comma, dot, None, False, False),
+    (-12345678, '-12,345,678', 3, comma, dot, None, False, False),
     (-12345678.123, '-12,345,678.1230', 3, comma, dot, 4, False, False),
     (-1234567890123.234567, '-1.23457T', 1, '|', '?', 5, True, True),
     (-1234567890123.234567, '-1|234|567|890|123.23', 3, '|', dot, 2, True, False),
@@ -247,7 +253,7 @@ test_cases = [
         # fmt: off
         -0.000000000000000000001234e+30,
         # fmt: on
-        '1,234,000,000',
+        '-1,234,000,000',
         3,
         comma,
         dot,
@@ -260,21 +266,28 @@ test_cases = [
     # fmt: on
 ]
 
+# test_cases = [
+#     # (-1234567890.0, '', 3, ',', '.', 3, False, False),
+#     # (-12345678.0, '-12,345,678', 3, comma, dot, None, False, False),
+#     (-12345678, '-12,345,678.000', 3, comma, dot, 3, True, False),
+#     # (-12345678.123, '-12,345,678.1230', 3, comma, dot, 4, False, False),
+# ]
+
 
 @pytest.mark.parametrize(
     'num,expected,grpSize,grpDelim,decSymb,precision,showDec,useShortform',
     test_cases,
 )
 def test_readableNumber(
-        num,
-        expected,
-        grpSize,
-        grpDelim,
-        decSymb,
-        precision,
-        showDec,
-        useShortform,
-):
+        num: numbers.Real,
+        expected: str,
+        grpSize: int,
+        grpDelim: str,
+        decSymb: str,
+        precision: int,
+        showDec: bool,
+        useShortform: bool,
+) -> None:
     number = ReadableNumber(
         num=num,
         digit_group_size=grpSize,
@@ -291,7 +304,7 @@ def test_readableNumber(
     'input_string',
     ['test', '-', '.', '!'],
 )
-def test_readableNumber_invalid_input(input_string):
+def test_readableNumber_invalid_input(input_string: str) -> None:
     with pytest.raises(ValueError):
         ReadableNumber(input_string)
 
@@ -311,6 +324,7 @@ def test_readableNumber_invalid_input(input_string):
         (-123456789123456, '-1.234568e+14', 1e6, 6),
         (-123456789123456789123456789, '-1.234568e+26', 1e6, 6),
         (-1.234567e12, '-1.234567e+12', 1e6, 6),
+        (-1.234567e+12, '-1.234567e+12', 1e6, 6),
         (1234567890, '1,234,567,890', 1e100, 6),
         # fmt: off
         (-0.000000000000000000001234e90, '-1.234000e+69', 1e6, 6),
@@ -339,7 +353,12 @@ def test_readableNumber_invalid_input(input_string):
         # fmt: on
     ],
 )
-def test_readableNumber_exponent_large_number(num, expected, threshold, precision):
+def test_readableNumber_exponent_large_number(
+        num: numbers.Real,
+        expected: str,
+        threshold: int,
+        precision: int,
+) -> None:
     number = ReadableNumber(
         num=num,
         use_exponent_for_large_numbers=True,
@@ -388,7 +407,12 @@ def test_readableNumber_exponent_large_number(num, expected, threshold, precisio
         (-1.123e-999, '0', 1e6, None),
     ],
 )
-def test_readableNumber_exponent_small_number(num, expected, threshold, precision):
+def test_readableNumber_exponent_small_number(
+        num: numbers.Real,
+        expected: str,
+        threshold: float,
+        precision: Optional[int],
+) -> None:
     number = ReadableNumber(
         num=num,
         use_exponent_for_small_numbers=True,
@@ -396,6 +420,111 @@ def test_readableNumber_exponent_small_number(num, expected, threshold, precisio
         precision=precision,
     )
     assert str(number) == expected
+
+
+@pytest.mark.parametrize(
+    'num, expected, sig_fig, other_options',
+    [
+        (1234567, '1,230,000', 3, {}),
+        (1234567.890123, '1,230,000', 3, {}),
+        (1234567, '1,23,00,00', 3, {'digit_group_size': 2}),
+        (1234567, '1|230|000', 3, {'digit_group_delimiter': '|'}),
+        (1234_45678, '123M', 4, {'use_shortform': True}),
+        (1234_45678, '123M', 4, {'use_shortform': True}),
+        (1234_56789, '123M', 6, {'use_shortform': True}),
+        (1234_56789, '123M', 6, {'use_shortform': True}),
+        (1234_56789, '123M', 5, {'use_shortform': True}),
+        (1234_56789, '124M', 4, {'use_shortform': True}),
+        (1234_56789, '123M', 3, {'use_shortform': True}),
+        (1234_56789, '120M', 2, {'use_shortform': True}),
+        (1234_56789, '100M', 1, {'use_shortform': True}),
+        (1234_56789, '124M', 4, {'use_shortform': True}),
+        (
+            1234_56789,
+            '1.235e+08',
+            4,
+            {'use_exponent_for_large_numbers': True},
+        ),
+        (
+            1234_56789,
+            '1.2346e+08',
+            5,
+            {'use_exponent_for_large_numbers': True},
+        ),
+        (
+            1234_56789,
+            '1.2346e+08',
+            5,
+            {'use_exponent_for_large_numbers': True},
+        ),
+        (0.123456, '0.1', 1, {}),
+        (0.123456, '0.12', 2, {}),
+        (0.123456, '0.123', 3, {}),
+        (0.123456, '0.1235', 4, {}),
+        (0.123456, '0.12346', 5, {}),
+        (0.123456, '0.123456', 6, {}),
+        (0.123456, '0.123456', 7, {}),
+        (0.123456, '0.123456', 8, {}),
+        (0.123456, '0.123456', 9, {}),
+        (0.00123456, '0.001', 1, {}),
+        (0.00123456, '0.0012', 2, {}),
+        (0.00123456, '0.00123', 3, {}),
+        (0.00123456, '0.001235', 4, {}),
+        (0.00123456, '0.0012346', 5, {}),
+        (0.00123456, '0.00123456', 6, {}),
+        (0.00123456, '0.00123456', 7, {}),
+        (0.00123456, '0.00123456', 8, {}),
+        (0.00123456, '0.00123456', 9, {}),
+        (0.00000123456, '0.000001', 1, {}),
+        (0.00000123456, '0.0000012', 2, {}),
+        (0.00000123456, '0.00000123', 3, {}),
+        (0.00000123456, '0.000001235', 4, {}),
+        (0.00000123456, '0.0000012346', 5, {}),
+        (0.00000123456, '0.00000123456', 6, {}),
+        (0.00000123456, '0.00000123456', 7, {}),
+        (0.00000123456, '0.00000123456', 8, {}),
+        (0.00000123456, '0.00000123456', 9, {}),
+        (0.0000000000123456, '0.00000000001', 1, {}),
+        (0.0000000000123456, '0.000000000012', 2, {}),
+        (0.0000000000123456, '0.0000000000123', 3, {}),
+        (0.0000000000123456, '0.00000000001235', 4, {}),
+        (0.0000000000123456, '0.000000000012346', 5, {}),
+        (0.0000000000123456, '0.000000000012346', 6, {}),
+        (0.0000000000123456, '0.000000000012346', 7, {}),
+        (0.0000000000123456, '0.000000000012346', 8, {}),
+        (0.0000000000123456, '0.000000000012346', 9, {}),
+        (0.0000000000000123456, '0.00000000000001', 1, {}),
+        (0.0000000000000123456, '0.000000000000012', 2, {}),
+        (0.0000000000000123456, '0.000000000000012', 3, {}),
+        (0.0000000000000123456, '0.000000000000012', 4, {}),
+        (0.0000000000000123456, '0.000000000000012', 5, {}),
+        (0.0000000000000123456, '0.000000000000012', 6, {}),
+        (0.0000000000000123456, '0.000000000000012', 7, {}),
+        (0.0000000000000123456, '0.000000000000012', 8, {}),
+        (0.0000000000000123456, '0.000000000000012', 9, {}),
+        (0.0000000000000000123456, '0.000000000000000', 1, {}),
+        (0.0000000000000000123456, '0.000000000000000', 2, {}),
+        (0.0000000000000000123456, '0.000000000000000', 3, {}),
+        (0.0000000000000000123456, '0.000000000000000', 4, {}),
+        (0.0000000000000000123456, '0.000000000000000', 5, {}),
+        (0.0000000000000000123456, '0.000000000000000', 6, {}),
+        (0.0000000000000000123456, '0.000000000000000', 7, {}),
+        (0.0000000000000000123456, '0.000000000000000', 8, {}),
+        (0.0000000000000000123456, '0.000000000000000', 9, {}),
+    ]
+)
+def test_significant_number__apply_sig_fig_only_to_numbers_less_than_1_False(
+        num: numbers.Real,
+        expected: str,
+        sig_fig: bool,
+        other_options: Dict[str, Any],
+) -> None:
+    rn = ReadableNumber(
+        significant_figures=sig_fig,
+        apply_sig_fig_only_to_numbers_less_than_1=False,
+        **other_options,
+    )
+    assert rn.of(num) == expected
 
 
 @pytest.mark.parametrize(
@@ -419,7 +548,11 @@ def test_readableNumber_exponent_small_number(num, expected, threshold, precisio
         ('use_shortform', 1, TypeError),
     ],
 )
-def test_readableNumber_invalid_params(param, val, expected_error):
+def test_readableNumber_invalid_params(
+        param: str,
+        val: Any,
+        expected_error: type(Exception),
+) -> None:
     kwarg = {param: val}
     with pytest.raises(expected_error):
         ReadableNumber(1.2345, **kwarg)
@@ -441,6 +574,10 @@ def test_readableNumber_invalid_params(param, val, expected_error):
         (1234567890, {}, '1,234,567,890'),
     ],
 )
-def test_of_method(num, options, expected):
+def test_of_method(
+        num: numbers.Real,
+        options: Dict[str, Any],
+        expected: str,
+) -> None:
     rn = ReadableNumber(**options)
     assert rn.of(num) == expected

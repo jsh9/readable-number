@@ -1,9 +1,11 @@
+import copy
+from dataclasses import dataclass
+from enum import Enum, auto
 import math
 import numbers
 from typing import Any, Optional, Union, Tuple
 from types import MappingProxyType
 
-from dataclasses import dataclass
 
 METRIC_PREFIX_LOOKUP = MappingProxyType(
     {
@@ -16,6 +18,18 @@ METRIC_PREFIX_LOOKUP = MappingProxyType(
 )
 MAX_TIER = max(METRIC_PREFIX_LOOKUP.keys())
 MAX_DIGITS_IN_DOUBLE_PRECISION: int = 15
+
+MSG_CONTACT_US = 'Please contact the authors.'
+
+
+class DecimalPartRenderingMethod(Enum):
+    NATURAL = auto()
+    HARD_PRECISION = auto()
+    SIGNIFICANT_FIGURES = auto()
+
+
+class InternalError(Exception):
+    """For cases that should not have happened"""
 
 
 @dataclass
@@ -30,6 +44,11 @@ class _IntegerAndDecimalParts:
 class ReadableNumber:
     """
     A class to hold a number for human-readable printing.
+
+    Showing an arbitrary number in a human-readable way is far from trivial,
+    because real-world numbers come in various forms. This is why there are
+    many options in this class for users to tune. That said, the default
+    options of this class generally give a pretty good result.
 
     Parameters
     ----------
@@ -58,12 +77,21 @@ class ReadableNumber:
         given number has more than 15 digits after the decimal point,
         only the first 15 digits will be preserved due to the limit of
         the double-precision system.
+    significant_figures : int or None
+        How many significant figures to display. "Significant figures"
+        and "precision" are different concepts.  Please refer to
+        https://en.wikipedia.org/wiki/Significant_figures for more details.
+        If one of ``precision`` and ``significant_figures`` is not ``None``,
+        the other must be ``None``.  If both are ``None``, the given number
+        will be printed in a "natural" way.
+    apply_sig_fig_only_to_numbers_less_than_1 : bool
+        Apm
     show_decimal_part_if_integer : bool
         Whether to show the decimal part if the given number is an integer.
         If this is false, it overrides ``precision``.  If this is true,
         the number of digits to show will be determined by ``precision``
         (if ``precision`` is None, 2 digits will be used as per
-        convention).
+        convention). Default: False.
     use_shortform : bool
         If true, for large numbers, use notations such as "12.5k", "5.6M",
         etc. Currently, the largest supported unit is T (trillion). Numbers
@@ -97,6 +125,8 @@ class ReadableNumber:
             digit_group_delimiter: str = ',',
             decimal_symbol: str = '.',
             precision: Optional[int] = None,
+            significant_figures: Optional[int] = None,
+            apply_sig_fig_only_to_numbers_less_than_1: bool = True,
             show_decimal_part_if_integer: bool = False,
             use_shortform: bool = False,
             use_exponent_for_large_numbers: bool = False,
@@ -109,6 +139,10 @@ class ReadableNumber:
         self.digit_group_delimiter = digit_group_delimiter
         self.decimal_symbol = decimal_symbol
         self.precision = precision
+        self.significant_figures = significant_figures
+        self.apply_sig_fig_only_to_numbers_less_than_1 = (
+            apply_sig_fig_only_to_numbers_less_than_1
+        )
         self.show_decimal_part_if_integer = show_decimal_part_if_integer
         self.use_shortform = use_shortform
         self.use_exponent_for_large_numbers = use_exponent_for_large_numbers
@@ -118,10 +152,13 @@ class ReadableNumber:
 
         self._validate_input_params()
 
-    def __repr__(self):
+    def __deepcopy__(self, memo: Any) -> 'ReadableNumber':
+        return self.deepcopy()
+
+    def __repr__(self) -> str:
         return str(self.num)
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.num is None:
             raise ValueError(
                 'Please initialize the object with an actual number,'
@@ -131,15 +168,29 @@ class ReadableNumber:
         if not math.isfinite(self.num):
             return str(self.num)
 
+        # We need to put this before self.use_exponent_for_small_numbers
+        # and self.use_exponent_for_large_numbers, because when we show
+        # very large/small numbers as exponents, we want to control
+        # the significant digits in the result.
+        if (
+            self.significant_figures is not None
+            and not self.apply_sig_fig_only_to_numbers_less_than_1
+            and math.fabs(self.num) >= 1
+        ):
+            rn_copy = self.deepcopy()  # to inherit all original configs
+            rn_copy.num = float(f'{self.num:.{self.significant_figures}g}')
+            rn_copy.significant_figures = None  # to prevent infinite recursion
+            return str(rn_copy)
+
         if (
             self.use_exponent_for_small_numbers
-            and 0 < abs(self.num) <= self.small_number_threshold
+            and 0 < math.fabs(self.num) <= self.small_number_threshold
         ):
             return self._render_number_in_exponential()
 
         if (
             self.use_exponent_for_large_numbers
-            and abs(self.num) >= self.large_number_threshold
+            and math.fabs(self.num) >= self.large_number_threshold
         ):
             return self._render_number_in_exponential()
 
@@ -165,11 +216,8 @@ class ReadableNumber:
         should_carry_1_to_integer: bool
         decimal_part, should_carry_1_to_integer = self._render_decimal_part()
 
-        neg_sign = '-' if self.num_parts.sign == -1 else ''
-
         return (
-            neg_sign
-            + self._render_integer_part_in_groups(plus_1=should_carry_1_to_integer)
+            self._render_integer_part_in_groups(plus_1=should_carry_1_to_integer)
             + self.decimal_symbol
             + decimal_part
         )
@@ -199,6 +247,12 @@ class ReadableNumber:
         self.num = num
         return self.__str__()
 
+    def deepcopy(self) -> 'ReadableNumber':
+        """Make a deep copy of itself"""
+        new_instance = self.__class__.__new__(self.__class__)
+        new_instance.__dict__ = copy.deepcopy(self.__dict__)
+        return new_instance
+
     def _validate_input_params(self) -> None:
         if not isinstance(self.digit_group_length, int):
             raise TypeError('`digit_group_size` not an integer')
@@ -224,8 +278,17 @@ class ReadableNumber:
             msg = '`precision` not None and not int'
             raise TypeError(msg)
 
+        if self.precision is not None and self.significant_figures is not None:
+            raise ValueError(
+                'Only one of `precision` and `significant_figures`'
+                ' can be non-None.'
+            )
+
         if self.precision is not None and self.precision < 0:
             raise ValueError('`precision` should >= 0')
+
+        if self.significant_figures is not None and self.significant_figures <= 0:
+            raise ValueError('`significant_figures` should > 0')
 
         if not isinstance(self.show_decimal_part_if_integer, bool):
             raise TypeError('`show_decimal_part_if_integer` not a boolean')
@@ -243,10 +306,13 @@ class ReadableNumber:
         if self.precision is not None:
             return f'{self.num:.{self.precision}e}'
 
+        if self.significant_figures is not None:
+            return f'{self.num:{self.significant_figures - 1}e}'
+
         temp_result = f'{self.num:.16e}'  # 16: max precision in 64-bit system
         base_part_str, exp_part_str = temp_result.split('e')
         base_part_float = float(base_part_str)
-        assert abs(base_part_float) < 10, 'Internal error; please contact the authors'
+        assert abs(base_part_float) < 10, f'Internal error. {MSG_CONTACT_US}'
         processed = str(ReadableNumber(base_part_float, precision=None))
         return processed + 'e' + exp_part_str
 
@@ -288,33 +354,75 @@ class ReadableNumber:
         elif new_chars[-1] == self.digit_group_delimiter:
             new_chars.pop(-1)
 
-        return ''.join(new_chars[::-1])
+        temp_result: str = ''.join(new_chars[::-1])
+
+        if self.num_parts.sign == -1 and not temp_result.startswith('-'):
+            return '-' + temp_result
+
+        return temp_result
 
     def _render_decimal_part(self) -> Tuple[str, bool]:
         """
         Render the decimal part.
 
-        The 2nd return value means whether to carry to the integer part.
+        The 2nd return value means whether to carry 1 to the integer part.
         """
-        if self.precision is None:  # "natural" way to display
-            nn = min(
-                MAX_DIGITS_IN_DOUBLE_PRECISION,  # cap at this many digits
-                # if fewer than the upper bound, display naturally:
-                len(self.num_parts.decimal_part_str),
-            )
+        self._sanity_check_for_render_decimal_part()
+
+        method: DecimalPartRenderingMethod
+
+        if self.significant_figures is not None:
+            if math.fabs(self.num) >= 1:
+                # This means `self.significant_figures` has no effect,
+                # because |num| ≥ 1
+                method = DecimalPartRenderingMethod.NATURAL
+            else:
+                method = DecimalPartRenderingMethod.SIGNIFICANT_FIGURES
+        elif self.precision is not None:
+            method = DecimalPartRenderingMethod.HARD_PRECISION
+        else:  # both precision and significant_figures are None
+            method = DecimalPartRenderingMethod.NATURAL
+
+        if DecimalPartRenderingMethod.SIGNIFICANT_FIGURES == method:
+            _num: float = self.num_parts.decimal_part_float  # shorthand
+            rounded_str: str = f'{_num:.{self.significant_figures}g}'
+
+            if 'e' not in rounded_str:
+                decimal_part: str = rounded_str.split('.')[1]
+            else:
+                rn_copy: 'ReadableNumber' = self.deepcopy()
+                rn_copy.num = float(rounded_str)
+                rn_copy.significant_figures = None  # to stop inf. recursion
+                decimal_part: str = str(rn_copy).split('.')[1]
+
+            rounded: float = float(rounded_str)
+            should_carry_1: bool = rounded >= 1
         else:
-            nn = min(self.precision, MAX_DIGITS_IN_DOUBLE_PRECISION)
+            if DecimalPartRenderingMethod.NATURAL == method:
+                nn = min(
+                    MAX_DIGITS_IN_DOUBLE_PRECISION,  # cap at this many digits
+                    # if fewer than the upper bound, display naturally:
+                    len(self.num_parts.decimal_part_str),
+                )
+            else:  # DecimalPartRenderingMethod.HARD_PRECISION
+                nn = min(self.precision, MAX_DIGITS_IN_DOUBLE_PRECISION)
 
-        rounded_str: str = '{:.{prec}f}'.format(
-            self.num_parts.decimal_part_float,
-            prec=nn,
-        )
-        rounded: float = float(rounded_str)
+            rounded_str: str = '{:.{prec}f}'.format(
+                self.num_parts.decimal_part_float,
+                prec=nn,
+            )
 
-        decimal_part: str = '' if nn == 0 else rounded_str.split('.')[1][:nn]
-        should_carry_1: bool = rounded >= 1
+            rounded: float = float(rounded_str)
+            decimal_part: str = '' if nn == 0 else rounded_str.split('.')[1][:nn]
+            should_carry_1: bool = rounded >= 1
 
         return decimal_part, should_carry_1
+
+    def _sanity_check_for_render_decimal_part(self):
+        if self.precision is not None and self.significant_figures is not None:
+            raise InternalError(
+                f'Both cannot be non-None. {MSG_CONTACT_US}'
+            )
 
     def _is_integer(self) -> bool:
         return int(self.num) == self.num
@@ -332,7 +440,7 @@ class ReadableNumber:
     @classmethod
     def _get_integer_and_decimal_parts(
             cls,
-            num: Union[float, int],
+            num: numbers.Real,
     ) -> _IntegerAndDecimalParts:
         if num > 0:
             sign = 1
@@ -344,23 +452,23 @@ class ReadableNumber:
             sign = 0
             neg_sign = ''
 
+        string_representation: str = str(num)
+
+        if string_representation[0] == '-':
+            string_representation = string_representation[1:]
+
         if isinstance(num, int):
             return _IntegerAndDecimalParts(
-                integer_part_str=str(num),
+                integer_part_str=string_representation,
                 integer_part_int=num,
                 decimal_part_str='',
                 decimal_part_float=0.0,
                 sign=sign,
             )
 
-        string_representation: str = str(num)
-
-        if string_representation[0] == '-':
-            string_representation = string_representation[1:]
-
         if 'e-' in string_representation:  # this means |num| is small
-            if abs(num) > 1:
-                raise ValueError(f'Internal error: num ({num}) is more than 1')
+            if math.fabs(num) > 1:
+                raise InternalError(f'`num` ({num}) is more than 1')
 
             mantissa_str, exponent_str = string_representation.split('e')
             mantissa_str_parts = mantissa_str.split('.')
@@ -391,7 +499,9 @@ class ReadableNumber:
             )
 
         if 'e' in string_representation:
-            raise ValueError('Edge case encountered; please contact the authors')
+            raise InternalError(
+                f'"e" in `string_representation`. {MSG_CONTACT_US}'
+            )
 
         integer_part_str, decimal_part_str = string_representation.split('.')
         return _IntegerAndDecimalParts(
