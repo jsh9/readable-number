@@ -3,8 +3,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum, auto
 import math
-import numbers
-from typing import Any, Optional, Tuple
+from typing import Any, Optional, Tuple, Union
 from types import MappingProxyType
 
 
@@ -54,7 +53,7 @@ class ReadableNumber:
 
     Parameters
     ----------
-    num : numbers.Real or None
+    num : float, int, or None
         A number to be printed in a readable format.  If ``None``, it
         means you are only initializing an "empty" object with printing
         options. In that case, you can use the `of()` method later to
@@ -122,7 +121,7 @@ class ReadableNumber:
 
     def __init__(
             self,
-            num: Optional[numbers.Real] = None,
+            num: Optional[Union[float, int]] = None,
             digit_group_size: int = 3,
             digit_group_delimiter: str = ',',
             decimal_symbol: str = '.',
@@ -136,7 +135,7 @@ class ReadableNumber:
             use_exponent_for_small_numbers: bool = False,
             small_number_threshold: float = 1e-6,
     ) -> None:
-        self.num: Optional[numbers.Real] = self._convert_to_num(num)
+        self.num: Optional[Union[float, int]] = self._convert_to_num(num)
         self.digit_group_length = digit_group_size
         self.digit_group_delimiter = digit_group_delimiter
         self.decimal_symbol = decimal_symbol
@@ -201,6 +200,7 @@ class ReadableNumber:
         if self.use_shortform and abs(self.num_parts.integer_part_int) > 1_000:
             return self._render_integer_part_with_shortform()
 
+        decimal_part: str
         if self._is_integer():
             if self.show_decimal_part_if_integer:
                 decimal_part = (
@@ -216,7 +216,6 @@ class ReadableNumber:
 
             return self._render_integer_part_in_groups()
 
-        decimal_part: str
         carry: int  # https://en.wikipedia.org/wiki/Carry_(arithmetic)
         decimal_part, carry = self._render_decimal_part()
 
@@ -226,7 +225,7 @@ class ReadableNumber:
             + decimal_part
         )
 
-    def of(self, num: numbers.Real) -> str:
+    def of(self, num: Union[float, int]) -> str:
         """
         Print the number ``num`` in a readable format.  This method is
         useful when you don't want to repeatedly specify the same options
@@ -234,7 +233,7 @@ class ReadableNumber:
 
         Parameters
         ----------
-        num : numbers.Real
+        num : float or int
             The number to be printed
 
         Returns
@@ -388,7 +387,7 @@ class ReadableNumber:
         method: _DecimalPartRenderingMethod
 
         if self.significant_figures is not None:
-            if math.fabs(self.num) >= 1:
+            if math.fabs(self.num) >= 1:  # type: ignore[arg-type]
                 # This means `self.significant_figures` has no effect,
                 # because |num| ≥ 1
                 method = _DecimalPartRenderingMethod.NATURAL
@@ -399,20 +398,25 @@ class ReadableNumber:
         else:  # both precision and significant_figures are None
             method = _DecimalPartRenderingMethod.NATURAL
 
+        rounded_str: str
+        decimal_part: str
+        rounded: float
+        carry: int
+
         if _DecimalPartRenderingMethod.SIGNIFICANT_FIGURES == method:
             _num: float = self.num_parts.decimal_part_float  # shorthand
-            rounded_str: str = f'{_num:.{self.significant_figures}g}'
+            rounded_str = f'{_num:.{self.significant_figures}g}'
 
             if 'e' not in rounded_str:
-                decimal_part: str = rounded_str.split('.')[1]
+                decimal_part = rounded_str.split('.')[1]
             else:
                 rn_copy: 'ReadableNumber' = self.deepcopy()
                 rn_copy.num = float(rounded_str)
                 rn_copy.significant_figures = None  # to stop inf. recursion
-                decimal_part: str = str(rn_copy).split('.')[1]
+                decimal_part = str(rn_copy).split('.')[1]
 
-            rounded: float = float(rounded_str)
-            carry: int = 1 if rounded >= 10**self.num_parts.multiplier else 0
+            rounded = float(rounded_str)
+            carry = 1 if rounded >= 10**self.num_parts.multiplier else 0
         else:
             if _DecimalPartRenderingMethod.NATURAL == method:
                 nn = min(
@@ -421,25 +425,25 @@ class ReadableNumber:
                     len(self.num_parts.decimal_part_str),
                 )
             else:  # _DecimalPartRenderingMethod.HARD_PRECISION
-                nn = min(self.precision, MAX_DIGITS_IN_DOUBLE_PRECISION)
+                nn = min(self.precision, MAX_DIGITS_IN_DOUBLE_PRECISION)  # type: ignore[type-var, assignment]
 
-            rounded_str: str = '{:.{prec}f}'.format(
+            rounded_str = '{:.{prec}f}'.format(
                 self.num_parts.decimal_part_float,
                 prec=nn,
             )
 
-            rounded: float = float(rounded_str)
-            decimal_part: str = (
+            rounded = float(rounded_str)
+            decimal_part = (
                 '' if nn == 0 else rounded_str.split('.')[1][:nn]
             )
-            carry: int = 1 if rounded >= 10**self.num_parts.multiplier else 0
+            carry = 1 if rounded >= 10**self.num_parts.multiplier else 0
 
         if decimal_part.startswith('-'):
             raise InternalError(f"Shouldn't have happened. {MSG_CONTACT_US}")
 
         return self._post_process_decimal_part(decimal_part, carry)
 
-    def _sanity_check_for_render_decimal_part(self):
+    def _sanity_check_for_render_decimal_part(self) -> None:
         if self.precision is not None and self.significant_figures is not None:
             raise InternalError(f'Both cannot be non-None. {MSG_CONTACT_US}')
 
@@ -476,10 +480,10 @@ class ReadableNumber:
         return decimal_part_final, carry
 
     def _is_integer(self) -> bool:
-        return int(self.num) == self.num
+        return int(self.num) == self.num  # type: ignore[arg-type]
 
     @classmethod
-    def _convert_to_num(cls, num: Any) -> numbers.Real:
+    def _convert_to_num(cls, num: Any) -> Optional[Union[float, int]]:
         if isinstance(num, (float, int, type(None))):
             return num
 
@@ -491,7 +495,7 @@ class ReadableNumber:
     @classmethod
     def _get_integer_and_decimal_parts(
             cls,
-            num: numbers.Real,
+            num: Union[float, int],
     ) -> _IntegerAndDecimalParts:
         if num > 0:
             sign = 1
@@ -583,7 +587,7 @@ class ReadableNumber:
         )
 
     @classmethod
-    def _decompose_float(cls, num: numbers.Real) -> Tuple[float, int]:
+    def _decompose_float(cls, num: Union[float, int]) -> Tuple[float, int]:
         dec = Decimal(math.fabs(num))
         exponent = cls._get_base_10_exp(dec)
         mantissa = float(dec.scaleb(-exponent).normalize())
@@ -594,9 +598,9 @@ class ReadableNumber:
         return mantissa, exponent
 
     @classmethod
-    def _get_base_10_exp(cls, decimal_: Decimal):
+    def _get_base_10_exp(cls, decimal_: Decimal) -> int:
         sign, digits, exponent = decimal_.as_tuple()
-        return len(digits) + exponent - 1
+        return len(digits) + exponent - 1  # type: ignore[operator]
 
     @classmethod
     def _round_digits(cls, digits: str, precision: Optional[int]) -> str:

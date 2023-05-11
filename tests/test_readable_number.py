@@ -1,9 +1,7 @@
-import numbers
-
 import pytest
 from readable_number import ReadableNumber
 
-from typing import Optional, Any, Dict
+from typing import Optional, Any, Dict, Union
 
 comma = ','
 dot = '.'
@@ -446,7 +444,7 @@ test_cases_expanded = (
     test_cases_expanded,
 )
 def test_readableNumber(
-        num: numbers.Real,
+        num: Union[float, int],
         expected: str,
         grpSize: int,
         grpDelim: str,
@@ -473,7 +471,7 @@ def test_readableNumber(
 )
 def test_readableNumber_invalid_input(input_string: str) -> None:
     with pytest.raises(ValueError):
-        ReadableNumber(input_string)
+        ReadableNumber(input_string)  # type: ignore[arg-type]
 
 
 test_cases_exponent_large_number = [
@@ -532,7 +530,7 @@ test_cases_exponent_large_number_expanded = (
     test_cases_exponent_large_number_expanded,
 )
 def test_readableNumber_exponent_large_number(
-        num: numbers.Real,
+        num: Union[float, int],
         expected: str,
         threshold: int,
         precision: int,
@@ -596,7 +594,7 @@ test_cases_exponent_small_number_expanded = (
     test_cases_exponent_small_number_expanded,
 )
 def test_readableNumber_exponent_small_number(
-        num: numbers.Real,
+        num: Union[float, int],
         expected: str,
         threshold: float,
         precision: Optional[int],
@@ -712,7 +710,7 @@ test_cases_significant_figure_expanded = [
     test_cases_significant_figure_expanded,
 )
 def test_significant_number__apply_sig_fig_only_to_numbers_less_than_1_False(
-        num: numbers.Real,
+        num: Union[float, int],
         expected: str,
         sig_fig: bool,
         other_options: Dict[str, Any],
@@ -749,7 +747,7 @@ def test_significant_number__apply_sig_fig_only_to_numbers_less_than_1_False(
 def test_readableNumber_invalid_params(
         param: str,
         val: Any,
-        expected_error: type(Exception),
+        expected_error: type[Exception],
 ) -> None:
     kwarg = {param: val}
     with pytest.raises(expected_error):
@@ -773,7 +771,7 @@ def test_readableNumber_invalid_params(
     ],
 )
 def test_of_method(
-        num: numbers.Real,
+        num: Union[float, int],
         options: Dict[str, Any],
         expected: str,
 ) -> None:
@@ -799,9 +797,3 @@ def test_of_method(
 def test_carry(input_: str, expected: str) -> None:
     output = ReadableNumber._carry(input_)
     assert output == expected
-
-
-def test_something():
-    rn = ReadableNumber()
-    rn.of(0.000000123)
-    assert True
