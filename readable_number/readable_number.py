@@ -341,9 +341,11 @@ class ReadableNumber:
         counter = 0
         new_chars = []
 
-        integer_part_str = str(
-            self.num_parts.integer_part_int + carry,
-        )
+        # We do `int(self.num_parts.integer_part_str)` because
+        # self.num_parts.integer_part_int may be negative, but we don't want
+        # to include the negative sign here. The negative sign is handled
+        # below (later in this function).
+        integer_part_str = str(int(self.num_parts.integer_part_str) + carry)
 
         for char in integer_part_str[::-1]:
             counter += 1
