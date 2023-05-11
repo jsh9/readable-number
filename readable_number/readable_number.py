@@ -4,7 +4,7 @@ from decimal import Decimal
 from enum import Enum, auto
 import math
 import numbers
-from typing import Any, Optional, Union, Tuple
+from typing import Any, Optional, Tuple
 from types import MappingProxyType
 
 
@@ -23,7 +23,7 @@ MAX_DIGITS_IN_DOUBLE_PRECISION: int = 15
 MSG_CONTACT_US = 'Please contact the authors.'
 
 
-class DecimalPartRenderingMethod(Enum):
+class _DecimalPartRenderingMethod(Enum):
     NATURAL = auto()
     HARD_PRECISION = auto()
     SIGNIFICANT_FIGURES = auto()
@@ -204,7 +204,9 @@ class ReadableNumber:
         if self._is_integer():
             if self.show_decimal_part_if_integer:
                 decimal_part = (
-                    '00' if self.precision is None else '0'.zfill(self.precision)
+                    '00'
+                    if self.precision is None
+                    else '0'.zfill(self.precision)
                 )
                 return (
                     self._render_integer_part_in_groups()
@@ -282,14 +284,16 @@ class ReadableNumber:
 
         if self.precision is not None and self.significant_figures is not None:
             raise ValueError(
-                'Only one of `precision` and `significant_figures`'
-                ' can be non-None.'
+                'Only one of `precision` and `significant_figures` can be non-None.'
             )
 
         if self.precision is not None and self.precision < 0:
             raise ValueError('`precision` should >= 0')
 
-        if self.significant_figures is not None and self.significant_figures <= 0:
+        if (
+            self.significant_figures is not None
+            and self.significant_figures <= 0
+        ):
             raise ValueError('`significant_figures` should > 0')
 
         if not isinstance(self.show_decimal_part_if_integer, bool):
@@ -350,10 +354,16 @@ class ReadableNumber:
         for char in integer_part_str[::-1]:
             counter += 1
             new_chars.append(char)
-            if self.digit_group_length > 0 and counter % self.digit_group_length == 0:
+            if (
+                self.digit_group_length > 0
+                and counter % self.digit_group_length == 0
+            ):
                 new_chars.append(self.digit_group_delimiter)
 
-        if new_chars[-1] == '-' and new_chars[-2] == self.digit_group_delimiter:
+        if (
+            new_chars[-1] == '-'
+            and new_chars[-2] == self.digit_group_delimiter
+        ):
             new_chars.pop(-2)
         elif new_chars[-1] == self.digit_group_delimiter:
             new_chars.pop(-1)
@@ -375,21 +385,21 @@ class ReadableNumber:
         """
         self._sanity_check_for_render_decimal_part()
 
-        method: DecimalPartRenderingMethod
+        method: _DecimalPartRenderingMethod
 
         if self.significant_figures is not None:
             if math.fabs(self.num) >= 1:
                 # This means `self.significant_figures` has no effect,
                 # because |num| ≥ 1
-                method = DecimalPartRenderingMethod.NATURAL
+                method = _DecimalPartRenderingMethod.NATURAL
             else:
-                method = DecimalPartRenderingMethod.SIGNIFICANT_FIGURES
+                method = _DecimalPartRenderingMethod.SIGNIFICANT_FIGURES
         elif self.precision is not None:
-            method = DecimalPartRenderingMethod.HARD_PRECISION
+            method = _DecimalPartRenderingMethod.HARD_PRECISION
         else:  # both precision and significant_figures are None
-            method = DecimalPartRenderingMethod.NATURAL
+            method = _DecimalPartRenderingMethod.NATURAL
 
-        if DecimalPartRenderingMethod.SIGNIFICANT_FIGURES == method:
+        if _DecimalPartRenderingMethod.SIGNIFICANT_FIGURES == method:
             _num: float = self.num_parts.decimal_part_float  # shorthand
             rounded_str: str = f'{_num:.{self.significant_figures}g}'
 
@@ -402,17 +412,16 @@ class ReadableNumber:
                 decimal_part: str = str(rn_copy).split('.')[1]
 
             rounded: float = float(rounded_str)
-            carry: int = 1 if rounded >= 10 ** self.num_parts.multiplier else 0
+            carry: int = 1 if rounded >= 10**self.num_parts.multiplier else 0
         else:
-            if DecimalPartRenderingMethod.NATURAL == method:
+            if _DecimalPartRenderingMethod.NATURAL == method:
                 nn = min(
                     MAX_DIGITS_IN_DOUBLE_PRECISION,  # cap at this many digits
                     # if fewer than the upper bound, display naturally:
                     len(self.num_parts.decimal_part_str),
                 )
-            else:  # DecimalPartRenderingMethod.HARD_PRECISION
+            else:  # _DecimalPartRenderingMethod.HARD_PRECISION
                 nn = min(self.precision, MAX_DIGITS_IN_DOUBLE_PRECISION)
-                # nn = self.precision
 
             rounded_str: str = '{:.{prec}f}'.format(
                 self.num_parts.decimal_part_float,
@@ -420,8 +429,10 @@ class ReadableNumber:
             )
 
             rounded: float = float(rounded_str)
-            decimal_part: str = '' if nn == 0 else rounded_str.split('.')[1][:nn]
-            carry: int = 1 if rounded >= 10 ** self.num_parts.multiplier else 0
+            decimal_part: str = (
+                '' if nn == 0 else rounded_str.split('.')[1][:nn]
+            )
+            carry: int = 1 if rounded >= 10**self.num_parts.multiplier else 0
 
         if decimal_part.startswith('-'):
             raise InternalError(f"Shouldn't have happened. {MSG_CONTACT_US}")
@@ -430,9 +441,7 @@ class ReadableNumber:
 
     def _sanity_check_for_render_decimal_part(self):
         if self.precision is not None and self.significant_figures is not None:
-            raise InternalError(
-                f'Both cannot be non-None. {MSG_CONTACT_US}'
-            )
+            raise InternalError(f'Both cannot be non-None. {MSG_CONTACT_US}')
 
     def _post_process_decimal_part(
             self,
@@ -454,7 +463,9 @@ class ReadableNumber:
         if precision_ is None:
             overflow_happened = len(decimal_part__) > len(decimal_part_)
         else:
-            overflow_happened = len(decimal_part__) > max(len(decimal_part_), precision_)
+            overflow_happened = len(decimal_part__) > max(
+                len(decimal_part_), precision_
+            )
 
         if overflow_happened:
             carry += 1
@@ -499,7 +510,7 @@ class ReadableNumber:
             multiplier = how_many_leading_0s_after_decimal_point
 
             # More accurate than "num *= 10 ** multiplier"
-            num = float(Decimal(num) * Decimal(10 ** multiplier))
+            num = float(Decimal(num) * Decimal(10**multiplier))
         else:
             multiplier = 0
 
@@ -525,7 +536,9 @@ class ReadableNumber:
             mantissa_str, exponent_str = string_representation.split('e')
             mantissa_str_parts = mantissa_str.split('.')
 
-            decimal_part_str = mantissa_str_parts[0].zfill(abs(int(exponent_str)))
+            decimal_part_str = mantissa_str_parts[0].zfill(
+                abs(int(exponent_str))
+            )
             if len(mantissa_str_parts) > 1:
                 decimal_part_str += mantissa_str_parts[1]
 
@@ -541,7 +554,9 @@ class ReadableNumber:
         if 'e+' in string_representation:  # this means |num| is big
             integer_val: int = int(num)
             decimal_val: float = num % 1
-            decimal_str = '' if decimal_val == 0 else str(decimal_val).split('.')[1]
+            decimal_str = (
+                '' if decimal_val == 0 else str(decimal_val).split('.')[1]
+            )
 
             return _IntegerAndDecimalParts(
                 integer_part_str=str(integer_val),

@@ -48,10 +48,46 @@ test_cases = [
     (1.1234567, '1.123456700', 3, comma, dot, 9, True, False),
     (1.1234567, '1.1234567000', 3, comma, dot, 10, True, False),
     (1.1234567, '1.1234567', 3, comma, dot, None, True, False),
-    (1.1234567890123456789012345, '1.123456789012346', 3, comma, dot, None, True, False),
-    (1.1234567890123456789012345, '1.1234567890123460', 3, comma, dot, 16, True, False),
-    (1.1234567890123456789012345, '1.12345678901234600', 3, comma, dot, 17, True, False),
-    (1.1234567890123456789012345, '1.123456789012346000', 3, comma, dot, 18, True, False),
+    (
+        1.1234567890123456789012345,
+        '1.123456789012346',
+        3,
+        comma,
+        dot,
+        None,
+        True,
+        False,
+    ),
+    (
+        1.1234567890123456789012345,
+        '1.1234567890123460',
+        3,
+        comma,
+        dot,
+        16,
+        True,
+        False,
+    ),
+    (
+        1.1234567890123456789012345,
+        '1.12345678901234600',
+        3,
+        comma,
+        dot,
+        17,
+        True,
+        False,
+    ),
+    (
+        1.1234567890123456789012345,
+        '1.123456789012346000',
+        3,
+        comma,
+        dot,
+        18,
+        True,
+        False,
+    ),
     (0.000_000_012_3, '0.0000000123', 3, comma, dot, None, True, False),
     (0.000_000_012_3, '0.', 3, comma, dot, 0, True, False),
     (0.000_000_012_3, '0.0', 3, comma, dot, 1, True, False),
@@ -135,7 +171,16 @@ test_cases = [
         True,
         False,
     ),
-    (1234567890.734626, '1,234,567,890.73462600', 3, comma, dot, 8, True, False),
+    (
+        1234567890.734626,
+        '1,234,567,890.73462600',
+        3,
+        comma,
+        dot,
+        8,
+        True,
+        False,
+    ),
     (1234567890.734626, '1.23456789B', 3, comma, dot, 8, True, True),
     (1234567890.734626, '1.23B', 3, comma, dot, 2, True, True),
     (1234567890.123456789, '1.235B', 3, comma, dot, 3, True, True),
@@ -150,19 +195,82 @@ test_cases = [
     (1234567890.123456789, '1.234567890123B', 3, comma, dot, 12, True, True),
     (1234567890.123456789, '1.2345678901235B', 3, comma, dot, 13, True, True),
     (1234567890.123456789, '1.23456789012346B', 3, comma, dot, 14, True, True),
-    (1234567890.123456789, '1.234567890123457B', 3, comma, dot, 15, True, True),
-    (1234567890.123456789, '1.234567890123457B', 3, comma, dot, 16, True, True),
-    (1234567890.123456789, '1.234567890123457B', 3, comma, dot, 17, True, True),
-    (1234567890.123456789, '1.234567890123457B', 3, comma, dot, 18, True, True),
-    (1234567890.123456789, '1.234567890123457B', 3, comma, dot, 19, True, True),
+    (
+        1234567890.123456789,
+        '1.234567890123457B',
+        3,
+        comma,
+        dot,
+        15,
+        True,
+        True,
+    ),
+    (
+        1234567890.123456789,
+        '1.234567890123457B',
+        3,
+        comma,
+        dot,
+        16,
+        True,
+        True,
+    ),
+    (
+        1234567890.123456789,
+        '1.234567890123457B',
+        3,
+        comma,
+        dot,
+        17,
+        True,
+        True,
+    ),
+    (
+        1234567890.123456789,
+        '1.234567890123457B',
+        3,
+        comma,
+        dot,
+        18,
+        True,
+        True,
+    ),
+    (
+        1234567890.123456789,
+        '1.234567890123457B',
+        3,
+        comma,
+        dot,
+        19,
+        True,
+        True,
+    ),
     (1_234_567_890_123, '1.235T', 3, comma, dot, 3, True, True),
-    (123_456_789_234_567_890_123, '123456789.235T', 3, comma, dot, 3, False, True),
+    (
+        123_456_789_234_567_890_123,
+        '123456789.235T',
+        3,
+        comma,
+        dot,
+        3,
+        False,
+        True,
+    ),
     (12345678.0, '12,345,678.000', 3, comma, dot, 3, True, False),
     (12345678.0, '12,345,678', 3, comma, dot, None, False, False),
     (12345678, '12,345,678', 3, comma, dot, None, False, False),
     (12345678.123, '12,345,678.1230', 3, comma, dot, 4, False, False),
     (1234567890123.234567, '1.23457T', 1, '|', '?', 5, True, True),
-    (1234567890123.234567, '1|234|567|890|123.23', 3, '|', dot, 2, True, False),
+    (
+        1234567890123.234567,
+        '1|234|567|890|123.23',
+        3,
+        '|',
+        dot,
+        2,
+        True,
+        False,
+    ),
     (0.0000123, '0.0000123', 3, comma, dot, None, True, False),
     (75.2, '75.', 3, comma, dot, 0, True, True),
     (75.9, '76.', 3, comma, dot, 0, True, True),
@@ -179,10 +287,37 @@ test_cases = [
     (1.23456789e3, '1,234.5679', 3, comma, dot, 4, False, False),
     (1.23456789e3, '1.2346k', 3, comma, dot, 4, False, True),
     (1.23456789e-30, '0.0000', 3, comma, dot, 4, False, True),
-    (1234567890123.234567, '1|234|567|890|123.23', 3, '|', dot, 2, True, False),
+    (
+        1234567890123.234567,
+        '1|234|567|890|123.23',
+        3,
+        '|',
+        dot,
+        2,
+        True,
+        False,
+    ),
     (0.000_000_067_89, '0.000000067890000000', 3, comma, dot, 18, True, False),
-    (123_456_789_234_567_890_123, '123456789.235T', 3, comma, dot, 3, False, True),
-    (123_456_789_234_567_890_123, '123456789.235T', 3, comma, dot, 3, False, True),
+    (
+        123_456_789_234_567_890_123,
+        '123456789.235T',
+        3,
+        comma,
+        dot,
+        3,
+        False,
+        True,
+    ),
+    (
+        123_456_789_234_567_890_123,
+        '123456789.235T',
+        3,
+        comma,
+        dot,
+        3,
+        False,
+        True,
+    ),
     (1234, '1234', 5, comma, dot, 3, False, False),
     (1234, '1234.000', 5, comma, dot, 3, True, False),
     (1234, '1234.00', 5, comma, dot, None, True, False),
@@ -250,7 +385,16 @@ test_cases = [
     (12, '12', 3, comma, dot, None, False, False),
     (123, '123', 3, comma, dot, None, False, False),
     (1234, '1,234', 3, comma, dot, None, False, False),
-    (1.234568e-41, '0.00000000000000000000000000000000000000001234568', 3, comma, dot, None, False, False),
+    (
+        1.234568e-41,
+        '0.00000000000000000000000000000000000000001234568',
+        3,
+        comma,
+        dot,
+        None,
+        False,
+        False,
+    ),
     (1.234568e-41, '0.00', 3, comma, dot, 2, False, False),
     (
         # fmt: off
@@ -269,34 +413,32 @@ test_cases = [
     # fmt: on
 ]
 
-test_cases_expanded = [
-    (-a, '-' + b, c, d, e, f, g, h)
-    for a, b, c, d, e, f, g, h in test_cases
-] + [
-    (+a, b, c, d, e, f, g, h)
-    for a, b, c, d, e, f, g, h in test_cases
-] + [
-    (0, '0.00', 3, comma, dot, 2, True, False),
-    (0, '0.0000', 3, comma, dot, 4, True, False),
-    (0, '0.000000', 3, comma, dot, 6, True, False),
-    # fmt: off
-    (1e-500, '0', 0, comma, dot, 3, False, False),
-    # fmt: on
-    (0, '0', 3, comma, dot, 3, False, False),
-    (-0, '0', 3, comma, dot, None, False, False),
-    (+0, '0', 3, comma, dot, None, False, False),
-    (float('nan'), 'nan', 1, comma, dot, 3, True, True),
-    (float('Nan'), 'nan', 3, comma, dot, 3, True, False),
-    (float('NaN'), 'nan', 3, comma, dot, 3, False, True),
-    (float('NAN'), 'nan', 3, comma, dot, 300, True, True),
-    (float('-NAN'), 'nan', 3, comma, dot, 300, True, True),
-    (float('inf'), 'inf', 3, comma, dot, 3, True, True),
-    (float('Inf'), 'inf', 3, comma, dot, 3, True, True),
-    (float('INF'), 'inf', 3, comma, dot, 3, True, True),
-    (float('-inf'), '-inf', 3, comma, dot, 3, True, True),
-    (float('-Inf'), '-inf', 3, comma, dot, 3, True, True),
-    (float('-INF'), '-inf', 3, comma, dot, 3, True, True),
-]
+test_cases_expanded = (
+    [(-a, '-' + b, c, d, e, f, g, h) for a, b, c, d, e, f, g, h in test_cases]
+    + [(+a, b, c, d, e, f, g, h) for a, b, c, d, e, f, g, h in test_cases]
+    + [
+        (0, '0.00', 3, comma, dot, 2, True, False),
+        (0, '0.0000', 3, comma, dot, 4, True, False),
+        (0, '0.000000', 3, comma, dot, 6, True, False),
+        # fmt: off
+        (1e-500, '0', 0, comma, dot, 3, False, False),
+        # fmt: on
+        (0, '0', 3, comma, dot, 3, False, False),
+        (-0, '0', 3, comma, dot, None, False, False),
+        (+0, '0', 3, comma, dot, None, False, False),
+        (float('nan'), 'nan', 1, comma, dot, 3, True, True),
+        (float('Nan'), 'nan', 3, comma, dot, 3, True, False),
+        (float('NaN'), 'nan', 3, comma, dot, 3, False, True),
+        (float('NAN'), 'nan', 3, comma, dot, 300, True, True),
+        (float('-NAN'), 'nan', 3, comma, dot, 300, True, True),
+        (float('inf'), 'inf', 3, comma, dot, 3, True, True),
+        (float('Inf'), 'inf', 3, comma, dot, 3, True, True),
+        (float('INF'), 'inf', 3, comma, dot, 3, True, True),
+        (float('-inf'), '-inf', 3, comma, dot, 3, True, True),
+        (float('-Inf'), '-inf', 3, comma, dot, 3, True, True),
+        (float('-INF'), '-inf', 3, comma, dot, 3, True, True),
+    ]
+)
 
 
 @pytest.mark.parametrize(
@@ -324,6 +466,7 @@ def test_readableNumber(
     )
     assert str(number) == expected
 
+
 @pytest.mark.parametrize(
     'input_string',
     ['test', '-', '.', '!'],
@@ -334,7 +477,6 @@ def test_readableNumber_invalid_input(input_string: str) -> None:
 
 
 test_cases_exponent_large_number = [
-
     (0.1, '0.100000', 1e6, 6),
     (0.01, '0.010000', 1e6, 6),
     (1234, '1,234', 1e6, 6),
@@ -345,7 +487,9 @@ test_cases_exponent_large_number = [
     (123456789123456, '1.234568e+14', 1e6, 6),
     (123456789123456789123456789, '1.234568e+26', 1e6, 6),
     (1.234567e12, '1.234567e+12', 1e6, 6),
+    # fmt: off
     (1.234567e+12, '1.234567e+12', 1e6, 6),
+    # fmt: on
     (1234567890, '1,234,567,890', 1e100, 6),
     # fmt: off
     (0.000000000000000000001234e90, '1.234000e+69', 1e6, 6),
@@ -374,15 +518,14 @@ test_cases_exponent_large_number = [
     # fmt: on
 ]
 
-test_cases_exponent_large_number_expanded = [
-    (-a, '-' + b, c, d)
-    for a, b, c, d in test_cases_exponent_large_number
-] + [
-    (+a, b, c, d)
-    for a, b, c, d in test_cases_exponent_large_number
-] + [
-    (0, '0', 1e6, 6),
-]
+test_cases_exponent_large_number_expanded = (
+    [(-a, '-' + b, c, d) for a, b, c, d in test_cases_exponent_large_number]
+    + [(+a, b, c, d) for a, b, c, d in test_cases_exponent_large_number]
+    + [
+        (0, '0', 1e6, 6),
+    ]
+)
+
 
 @pytest.mark.parametrize(
     'num, expected, threshold, precision',
@@ -438,16 +581,14 @@ test_cases_exponent_small_number = [
     (1.123e-123, '1.123e-123', 1e6, None),
 ]
 
-test_cases_exponent_small_number_expanded = [
-    (-a, '-' + b, c, d)
-    for a, b, c, d in test_cases_exponent_small_number
-] + [
-    (+a, b, c, d)
-    for a, b, c, d in test_cases_exponent_small_number
-] + [
-    (0, '0', 1e-6, 6),
-    (1.123e-999, '0', 1e6, None),
-]
+test_cases_exponent_small_number_expanded = (
+    [(-a, '-' + b, c, d) for a, b, c, d in test_cases_exponent_small_number]
+    + [(+a, b, c, d) for a, b, c, d in test_cases_exponent_small_number]
+    + [
+        (0, '0', 1e-6, 6),
+        (1.123e-999, '0', 1e6, None),
+    ]
+)
 
 
 @pytest.mark.parametrize(
@@ -469,7 +610,7 @@ def test_readableNumber_exponent_small_number(
     assert str(number) == expected
 
 
-test_cases_significant_figure = [
+test_cases_sig_figure = [
     (1234567, '1,230,000', 3, {}),
     (1234567.890123, '1,230,000', 3, {}),
     (1234567, '1,23,00,00', 3, {'digit_group_size': 2}),
@@ -562,12 +703,9 @@ test_cases_significant_figure = [
 ]
 
 test_cases_significant_figure_expanded = [
-    (-a, '-' + b, c, d)
-    for a, b, c, d in test_cases_significant_figure
-] + [
-    (+a, b, c, d)
-    for a, b, c, d in test_cases_significant_figure
-]
+    (-a, '-' + b, c, d) for a, b, c, d in test_cases_sig_figure
+] + [(+a, b, c, d) for a, b, c, d in test_cases_sig_figure]
+
 
 @pytest.mark.parametrize(
     'num, expected, sig_fig, other_options',

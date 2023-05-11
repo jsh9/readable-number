@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/jsh9/cercis
-    rev: main
+    rev: 0.1.5
     hooks:
       - id: cercis
         args: [
@@ -8,7 +8,7 @@ repos:
           --single-quote=True,
         ]
   - repo: https://github.com/jsh9/cercis
-    rev: main
+    rev: 0.1.5
     hooks:
       - id: cercis-jupyter
         args: [
