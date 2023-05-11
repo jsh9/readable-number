@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, Type
 
 import pytest
 
@@ -748,7 +748,7 @@ def test_significant_number__apply_sig_fig_only_to_numbers_less_than_1_False(
 def test_readableNumber_invalid_params(
         param: str,
         val: Any,
-        expected_error: type[Exception],
+        expected_error: Type[Exception],
 ) -> None:
     kwarg = {param: val}
     with pytest.raises(expected_error):
