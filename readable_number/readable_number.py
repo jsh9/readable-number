@@ -1,11 +1,10 @@
 import copy
+import math
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum, auto
-import math
-from typing import Any, Optional, Tuple, Union
 from types import MappingProxyType
-
+from typing import Any, Optional, Tuple, Union
 
 METRIC_PREFIX_LOOKUP = MappingProxyType(
     {
@@ -433,9 +432,7 @@ class ReadableNumber:
             )
 
             rounded = float(rounded_str)
-            decimal_part = (
-                '' if nn == 0 else rounded_str.split('.')[1][:nn]
-            )
+            decimal_part = '' if nn == 0 else rounded_str.split('.')[1][:nn]
             carry = 1 if rounded >= 10**self.num_parts.multiplier else 0
 
         if decimal_part.startswith('-'):

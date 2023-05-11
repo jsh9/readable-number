@@ -1,7 +1,8 @@
-import pytest
-from readable_number import ReadableNumber
+from typing import Any, Dict, Optional, Union
 
-from typing import Optional, Any, Dict, Union
+import pytest
+
+from readable_number import ReadableNumber
 
 comma = ','
 dot = '.'
