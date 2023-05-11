@@ -1,5 +1,6 @@
 import copy
 from dataclasses import dataclass
+from decimal import Decimal
 from enum import Enum, auto
 import math
 import numbers
@@ -39,6 +40,7 @@ class _IntegerAndDecimalParts:
     decimal_part_str: str
     decimal_part_float: float
     sign: int
+    multiplier: int = 0  # to keep track of numbers with small absolute values
 
 
 class ReadableNumber:
@@ -213,11 +215,11 @@ class ReadableNumber:
             return self._render_integer_part_in_groups()
 
         decimal_part: str
-        should_carry_1_to_integer: bool
-        decimal_part, should_carry_1_to_integer = self._render_decimal_part()
+        carry: int  # https://en.wikipedia.org/wiki/Carry_(arithmetic)
+        decimal_part, carry = self._render_decimal_part()
 
         return (
-            self._render_integer_part_in_groups(plus_1=should_carry_1_to_integer)
+            self._render_integer_part_in_groups(carry=carry)
             + self.decimal_symbol
             + decimal_part
         )
@@ -335,12 +337,12 @@ class ReadableNumber:
 
         return float_part_str + unit_name
 
-    def _render_integer_part_in_groups(self, plus_1: bool = False) -> str:
+    def _render_integer_part_in_groups(self, carry: int = 0) -> str:
         counter = 0
         new_chars = []
 
         integer_part_str = str(
-            self.num_parts.integer_part_int + (1 if plus_1 else 0),
+            self.num_parts.integer_part_int + carry,
         )
 
         for char in integer_part_str[::-1]:
@@ -361,11 +363,13 @@ class ReadableNumber:
 
         return temp_result
 
-    def _render_decimal_part(self) -> Tuple[str, bool]:
+    def _render_decimal_part(self) -> Tuple[str, int]:
         """
         Render the decimal part.
 
-        The 2nd return value means whether to carry 1 to the integer part.
+        The 2nd return value means the amount to carry.
+
+        See more: https://en.wikipedia.org/wiki/Carry_(arithmetic)
         """
         self._sanity_check_for_render_decimal_part()
 
@@ -396,7 +400,7 @@ class ReadableNumber:
                 decimal_part: str = str(rn_copy).split('.')[1]
 
             rounded: float = float(rounded_str)
-            should_carry_1: bool = rounded >= 1
+            carry: int = 1 if rounded >= 10 ** self.num_parts.multiplier else 0
         else:
             if DecimalPartRenderingMethod.NATURAL == method:
                 nn = min(
@@ -406,6 +410,7 @@ class ReadableNumber:
                 )
             else:  # DecimalPartRenderingMethod.HARD_PRECISION
                 nn = min(self.precision, MAX_DIGITS_IN_DOUBLE_PRECISION)
+                # nn = self.precision
 
             rounded_str: str = '{:.{prec}f}'.format(
                 self.num_parts.decimal_part_float,
@@ -414,15 +419,48 @@ class ReadableNumber:
 
             rounded: float = float(rounded_str)
             decimal_part: str = '' if nn == 0 else rounded_str.split('.')[1][:nn]
-            should_carry_1: bool = rounded >= 1
+            carry: int = 1 if rounded >= 10 ** self.num_parts.multiplier else 0
 
-        return decimal_part, should_carry_1
+        if decimal_part.startswith('-'):
+            raise InternalError(f"Shouldn't have happened. {MSG_CONTACT_US}")
+
+        return self._post_process_decimal_part(decimal_part, carry)
 
     def _sanity_check_for_render_decimal_part(self):
         if self.precision is not None and self.significant_figures is not None:
             raise InternalError(
                 f'Both cannot be non-None. {MSG_CONTACT_US}'
             )
+
+    def _post_process_decimal_part(
+            self,
+            decimal_part: str,
+            carry: int,
+    ) -> Tuple[str, int]:
+        decimal_part_: str = '0' * self.num_parts.multiplier + decimal_part
+
+        if self.precision is not None:
+            precision_ = self.precision
+        elif self.significant_figures is not None:
+            precision_ = self.significant_figures + self.num_parts.multiplier
+        else:
+            precision_ = None
+
+        decimal_part__: str = self._round_digits(decimal_part_, precision_)
+
+        overflow_happened: bool
+        if precision_ is None:
+            overflow_happened = len(decimal_part__) > len(decimal_part_)
+        else:
+            overflow_happened = len(decimal_part__) > max(len(decimal_part_), precision_)
+
+        if overflow_happened:
+            carry += 1
+            decimal_part_final = decimal_part__[:1]
+        else:
+            decimal_part_final = decimal_part__
+
+        return decimal_part_final, carry
 
     def _is_integer(self) -> bool:
         return int(self.num) == self.num
@@ -452,6 +490,17 @@ class ReadableNumber:
             sign = 0
             neg_sign = ''
 
+        mantissa, exponent = cls._decompose_float(num)
+        how_many_leading_0s_after_decimal_point: int = -exponent - 1
+
+        if math.fabs(num) < 0.01:
+            multiplier = how_many_leading_0s_after_decimal_point
+
+            # More accurate than "num *= 10 ** multiplier"
+            num = float(Decimal(num) * Decimal(10 ** multiplier))
+        else:
+            multiplier = 0
+
         string_representation: str = str(num)
 
         if string_representation[0] == '-':
@@ -464,6 +513,7 @@ class ReadableNumber:
                 decimal_part_str='',
                 decimal_part_float=0.0,
                 sign=sign,
+                multiplier=multiplier,
             )
 
         if 'e-' in string_representation:  # this means |num| is small
@@ -483,6 +533,7 @@ class ReadableNumber:
                 decimal_part_str=decimal_part_str,
                 decimal_part_float=float(neg_sign + '0.' + decimal_part_str),
                 sign=sign,
+                multiplier=multiplier,
             )
 
         if 'e+' in string_representation:  # this means |num| is big
@@ -496,6 +547,7 @@ class ReadableNumber:
                 decimal_part_str=decimal_str,
                 decimal_part_float=decimal_val,
                 sign=sign,
+                multiplier=multiplier,
             )
 
         if 'e' in string_representation:
@@ -510,4 +562,65 @@ class ReadableNumber:
             decimal_part_str=decimal_part_str,
             decimal_part_float=float('0.' + decimal_part_str),
             sign=sign,
+            multiplier=multiplier,
         )
+
+    @classmethod
+    def _decompose_float(cls, num: numbers.Real) -> Tuple[float, int]:
+        dec = Decimal(math.fabs(num))
+        exponent = cls._get_base_10_exp(dec)
+        mantissa = float(dec.scaleb(-exponent).normalize())
+        if mantissa == 10.0:
+            mantissa = 1.0
+            exponent += 1
+
+        return mantissa, exponent
+
+    @classmethod
+    def _get_base_10_exp(cls, decimal_: Decimal):
+        sign, digits, exponent = decimal_.as_tuple()
+        return len(digits) + exponent - 1
+
+    @classmethod
+    def _round_digits(cls, digits: str, precision: Optional[int]) -> str:
+        """For example:
+
+        * digits = '00013245', precision = 5  --> output: '00013'
+        * digits = '00013745', precision = 5  --> output: '00014'
+        * digits = '00019745', precision = 5  --> output: '00020'
+        * digits = '00019745', precision = 10 --> output: '0001974500'
+        """
+        if precision == len(digits) or digits == '':
+            return digits
+
+        if precision is None:  # "natural" way to round: strip 0
+            return digits.rstrip('0')
+
+        if precision < 0:
+            raise InternalError(f'`precision` should >= 0. {MSG_CONTACT_US}')
+
+        if precision == 0:
+            return ''
+
+        if precision > len(digits):
+            how_many_0s_to_add: int = precision - len(digits)
+            return digits + '0' * how_many_0s_to_add
+
+        digits_to_keep: str = digits[:precision]
+        digits_to_throw_away: str = digits[precision:]
+        should_carry: bool = digits_to_throw_away[0] >= '5'
+        if should_carry:
+            digits_to_keep = cls._carry(digits_to_keep)
+
+        return digits_to_keep
+
+    @classmethod
+    def _carry(cls, digits: str) -> str:
+        if digits == '':
+            return '1'
+
+        last_digit: str = digits[-1]
+        if last_digit < '9':
+            return digits[:-1] + chr(ord(last_digit) + 1)
+
+        return cls._carry(digits[:-1]) + '0'
