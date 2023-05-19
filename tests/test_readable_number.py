@@ -545,7 +545,7 @@ def test_readableNumber_exponent_large_number(
     assert str(number) == expected
 
 
-test_cases_exponent_small_number = [
+cases_exponent_small_number_prec = [
     (0.1, '0.100000', 1e-6, 6),
     (0.01, '0.010000', 1e-6, 6),
     (123456789, '123,456,789', 1e-6, 6),
@@ -580,9 +580,9 @@ test_cases_exponent_small_number = [
     (1.123e-123, '1.123e-123', 1e6, None),
 ]
 
-test_cases_exponent_small_number_expanded = (
-    [(-a, '-' + b, c, d) for a, b, c, d in test_cases_exponent_small_number]
-    + [(+a, b, c, d) for a, b, c, d in test_cases_exponent_small_number]
+cases_exponent_small_number_prec_expanded = (
+    [(-a, '-' + b, c, d) for a, b, c, d in cases_exponent_small_number_prec]
+    + [(+a, b, c, d) for a, b, c, d in cases_exponent_small_number_prec]
     + [
         (0, '0', 1e-6, 6),
         (1.123e-999, '0', 1e6, None),
@@ -592,9 +592,9 @@ test_cases_exponent_small_number_expanded = (
 
 @pytest.mark.parametrize(
     'num, expected, threshold, precision',
-    test_cases_exponent_small_number_expanded,
+    cases_exponent_small_number_prec_expanded,
 )
-def test_readableNumber_exponent_small_number(
+def test_readableNumber_exponent_small_number_prec(
         num: Union[float, int],
         expected: str,
         threshold: float,
@@ -642,6 +642,16 @@ test_cases_sig_figure = [
         5,
         {'use_exponent_for_large_numbers': True},
     ),
+    (1.23456, '1', 1, {}),
+    (1.23456, '1.2', 2, {}),
+    (1.23456, '1.23', 3, {}),
+    (1.23456, '1.235', 4, {}),
+    (1.23456, '1.2346', 5, {}),
+    (1.23456, '1.23456', 6, {}),
+    (1.23456, '1.234560', 7, {}),
+    (1.23456, '1.2345600', 8, {}),
+    (1.23456, '1.23456000', 9, {}),
+    (1.23456, '1.23456000000000', 15, {}),
     (0.123456, '0.1', 1, {}),
     (0.123456, '0.12', 2, {}),
     (0.123456, '0.123', 3, {}),
@@ -652,6 +662,16 @@ test_cases_sig_figure = [
     (0.123456, '0.12345600', 8, {}),
     (0.123456, '0.123456000', 9, {}),
     (0.123456, '0.123456000000000', 15, {}),
+    (0.0123456, '0.01', 1, {}),
+    (0.0123456, '0.012', 2, {}),
+    (0.0123456, '0.0123', 3, {}),
+    (0.0123456, '0.01235', 4, {}),
+    (0.0123456, '0.012346', 5, {}),
+    (0.0123456, '0.0123456', 6, {}),
+    (0.0123456, '0.01234560', 7, {}),
+    (0.0123456, '0.012345600', 8, {}),
+    (0.0123456, '0.0123456000', 9, {}),
+    (0.0123456, '0.0123456000000000', 15, {}),
     (0.00123456, '0.001', 1, {}),
     (0.00123456, '0.0012', 2, {}),
     (0.00123456, '0.00123', 3, {}),
@@ -722,6 +742,70 @@ def test_significant_number__apply_sig_fig_only_to_numbers_less_than_1_False(
         **other_options,
     )
     assert rn.of(num) == expected
+
+
+cases_exponent_small_number_sig_fig = [
+    (0.1, '0.100', 1e-6, 3),
+    (0.01, '0.01000', 1e-6, 4),
+    (123456789, '123,456,789', 1e-6, 6),
+    (0.00001, '0.0000100000', 1e-6, 6),
+    (0.000001, '1.0000e-06', 1e-6, 5),
+    (0.0000001, '1.0000e-07', 1e-6, 5),
+    (0.0000000000000000000123, '1.230e-20', 1e-6, 4),
+    (0.000075e-10, '7.500000e-15', 1e-6, 7),
+    (1234567890e-50, '1.234568e-41', 1e-6, 7),
+    (0.000123, '1.2300e-04', 1e-1, 5),
+    (0.000123, '1.2300e-04', 1e-2, 5),
+    (0.000123, '1.2300e-04', 1e-3, 5),
+    (0.000123, '1.2300e-04', 0.000124, 5),
+    (0.000123, '1.2300e-04', 0.000123, 5),
+    (0.000123, '0.00012300', 0.000122, 5),
+    (0.000123, '0.00012300', 1e-4, 5),
+    (0.000123, '0.00012300', 1e-5, 5),
+    (0.0000000000123, '0.0000000000123', 1e-20, None),
+    (0.00012345, '1e-04', 1e-1, 1),
+    (0.00012345, '1.2e-04', 1e-1, 2),
+    (0.00012345, '1.23e-04', 1e-1, 3),
+    (0.00012345, '1.235e-04', 1e-1, 4),
+    (0.00012345, '1.2345e-04', 1e-1, 5),
+    (0.00012345, '1.23450e-04', 1e-1, 6),
+    (0.00012345, '1.234500e-04', 1e-1, 7),
+    (0.00012345, '1.234500000e-04', 1e-1, 10),
+    (0.00012345, '1.23450000000000e-04', 1e-1, 15),
+    (0.00012345, '0.000123450000000000', 1e-20, 15),
+    (0.00012345, '1.2345e-04', 1e-1, None),
+    (0.00012345, '0.00012345', 1e-10, None),
+    (1.123e-123, '1.123e-123', 1e6, None),
+]
+
+cases_exponent_small_number_sig_fig_expanded = (
+    [(-a, '-' + b, c, d) for a, b, c, d in cases_exponent_small_number_sig_fig]
+    + [(+a, b, c, d) for a, b, c, d in cases_exponent_small_number_sig_fig]
+    + [
+        (0, '0', 1e-6, 6),
+        (1.123e-999, '0', 1e6, None),
+    ]
+)
+
+
+@pytest.mark.parametrize(
+    'num, expected, threshold, sig_fig',
+    # cases_exponent_small_number_sig_fig_expanded,
+    cases_exponent_small_number_sig_fig,
+)
+def test_readableNumber_exponent_small_number_sig_fig(
+        num: Union[float, int],
+        expected: str,
+        threshold: float,
+        sig_fig: int,
+) -> None:
+    number = ReadableNumber(
+        num=num,
+        use_exponent_for_small_numbers=True,
+        small_number_threshold=threshold,
+        significant_figures=sig_fig,
+    )
+    assert str(number) == expected
 
 
 @pytest.mark.parametrize(
