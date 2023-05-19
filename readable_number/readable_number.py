@@ -27,7 +27,7 @@ class _DecimalPartRenderingMethod(Enum):
     SIGNIFICANT_FIGURES = auto()
 
 
-class InternalError(Exception):
+class _InternalError(Exception):
     """For cases that should not have happened"""
 
 
@@ -436,13 +436,13 @@ class ReadableNumber:
             carry = 1 if rounded >= 10**self.num_parts.multiplier else 0
 
         if decimal_part.startswith('-'):
-            raise InternalError(f"Shouldn't have happened. {MSG_CONTACT_US}")
+            raise _InternalError(f"Shouldn't have happened. {MSG_CONTACT_US}")
 
         return self._post_process_decimal_part(decimal_part, carry)
 
     def _sanity_check_for_render_decimal_part(self) -> None:
         if self.precision is not None and self.significant_figures is not None:
-            raise InternalError(f'Both cannot be non-None. {MSG_CONTACT_US}')
+            raise _InternalError(f'Both cannot be non-None. {MSG_CONTACT_US}')
 
     def _post_process_decimal_part(
             self,
@@ -532,7 +532,7 @@ class ReadableNumber:
 
         if 'e-' in string_representation:  # this means |num| is small
             if math.fabs(num) > 1:
-                raise InternalError(f'`num` ({num}) is more than 1')
+                raise _InternalError(f'`num` ({num}) is more than 1')
 
             mantissa_str, exponent_str = string_representation.split('e')
             mantissa_str_parts = mantissa_str.split('.')
@@ -569,7 +569,7 @@ class ReadableNumber:
             )
 
         if 'e' in string_representation:
-            raise InternalError(
+            raise _InternalError(
                 f'"e" in `string_representation`. {MSG_CONTACT_US}'
             )
 
@@ -615,7 +615,7 @@ class ReadableNumber:
             return digits.rstrip('0')
 
         if precision < 0:
-            raise InternalError(f'`precision` should >= 0. {MSG_CONTACT_US}')
+            raise _InternalError(f'`precision` should >= 0. {MSG_CONTACT_US}')
 
         if precision == 0:
             return ''
