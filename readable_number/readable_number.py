@@ -180,7 +180,8 @@ class ReadableNumber:
             rn_copy = self.deepcopy()  # to inherit all original configs
             rn_copy.num = float(f'{self.num:.{self.significant_figures}g}')
             rn_copy.significant_figures = None  # to prevent infinite recursion
-            return str(rn_copy)
+            naturally_rendered: str = str(rn_copy)  # sig_fig and prec are both None
+            return self._post_process_significant_figures(naturally_rendered)
 
         if (
             self.use_exponent_for_small_numbers
@@ -478,6 +479,24 @@ class ReadableNumber:
 
     def _is_integer(self) -> bool:
         return int(self.num) == self.num  # type: ignore[arg-type]
+
+    def _post_process_significant_figures(self, string: str) -> str:
+        existing_sig_figs: int = sum(map(self._is_sig, string.split('e')[0]))
+        if self.significant_figures is None:
+            raise _InternalError('self.significant_figures should not be None')
+
+        if existing_sig_figs > self.significant_figures:
+            raise _InternalError('This should not have happened')
+
+        if self._is_integer():
+            return string
+
+        diff: int = self.significant_figures - existing_sig_figs
+        return string + '0' * diff
+
+    @classmethod
+    def _is_sig(cls, char: str) -> bool:
+        return char in {'1', '2', '3', '4', '5', '6', '7', '8', '9'}
 
     @classmethod
     def _convert_to_num(cls, num: Any) -> Optional[Union[float, int]]:
