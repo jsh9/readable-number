@@ -52,7 +52,7 @@ class ReadableNumber:
 
     Parameters
     ----------
-    num : float, int, or None
+    num : Optional[Union[float, int]]
         A number to be printed in a readable format.  If ``None``, it
         means you are only initializing an "empty" object with printing
         options. In that case, you can use the `of()` method later to
@@ -68,7 +68,7 @@ class ReadableNumber:
         (Default: ",")
     decimal_symbol : str
         The symbol to use as a decimal "point".  Default: "."
-    precision : int or None
+    precision : Optional[int]
         How many digits to keep in the decimal part.  For example,
         if 3, the number -4.56789 will be printed as -4.568.  If 0,
         the number -75.924 will be printed as "-76." (including the dot).
@@ -77,7 +77,7 @@ class ReadableNumber:
         given number has more than 15 digits after the decimal point,
         only the first 15 digits will be preserved due to the limit of
         the double-precision system.
-    significant_figures : int or None
+    significant_figures : Optional[int]
         How many significant figures to display. "Significant figures"
         and "precision" are different concepts.  Please refer to
         https://en.wikipedia.org/wiki/Significant_figures for more details.
@@ -232,7 +232,7 @@ class ReadableNumber:
 
         Parameters
         ----------
-        num : float or int
+        num : Union[float, int]
             The number to be printed
 
         Returns
