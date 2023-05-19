@@ -312,7 +312,7 @@ class ReadableNumber:
             return f'{self.num:.{self.precision}e}'
 
         if self.significant_figures is not None:
-            return f'{self.num:{self.significant_figures - 1}e}'
+            return f'{self.num:.{self.significant_figures - 1}e}'
 
         temp_result = f'{self.num:.16e}'  # 16: max precision in 64-bit system
         base_part_str, exp_part_str = temp_result.split('e')
