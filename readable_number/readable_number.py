@@ -507,7 +507,7 @@ class ReadableNumber:
         mantissa, exponent = cls._decompose_float(num)
         how_many_leading_0s_after_decimal_point: int = -exponent - 1
 
-        if math.fabs(num) < 0.01:
+        if math.fabs(num) < 0.1:
             multiplier = how_many_leading_0s_after_decimal_point
 
             # More accurate than "num *= 10 ** multiplier"
