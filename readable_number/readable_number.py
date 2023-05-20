@@ -413,7 +413,6 @@ class ReadableNumber:
             else:
                 rn_copy: 'ReadableNumber' = self.deepcopy()
                 rn_copy.num = float(rounded_str)
-                rn_copy.significant_figures = None  # to stop inf. recursion
                 decimal_part = str(rn_copy).split('.')[1]
 
             rounded = float(rounded_str)
