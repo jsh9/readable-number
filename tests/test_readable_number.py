@@ -624,19 +624,13 @@ test_cases_sig_figure = [
     (1_234_567_890, '1.23B', 2, {'use_shortform': True}),
     (
         1234_56789,
-        '1.235e+08',
+        '1.2346e+08',
         4,
         {'use_exponent_for_large_numbers': True},
     ),
     (
         1234_56789,
-        '1.2346e+08',
-        5,
-        {'use_exponent_for_large_numbers': True},
-    ),
-    (
-        1234_56789,
-        '1.2346e+08',
+        '1.23457e+08',
         5,
         {'use_exponent_for_large_numbers': True},
     ),
@@ -745,29 +739,28 @@ cases_exponent_small_number_sig_fig = [
     (0.01, '0.01000', 1e-6, 4),
     (123456789, '123,456,789', 1e-6, 6),
     (0.00001, '0.0000100000', 1e-6, 6),
-    (0.000001, '1.0000e-06', 1e-6, 5),
-    (0.0000001, '1.0000e-07', 1e-6, 5),
-    (0.0000000000000000000123, '1.230e-20', 1e-6, 4),
-    (0.000075e-10, '7.500000e-15', 1e-6, 7),
-    (1234567890e-50, '1.234568e-41', 1e-6, 7),
-    (0.000123, '1.2300e-04', 1e-1, 5),
-    (0.000123, '1.2300e-04', 1e-2, 5),
-    (0.000123, '1.2300e-04', 1e-3, 5),
-    (0.000123, '1.2300e-04', 0.000124, 5),
-    (0.000123, '1.2300e-04', 0.000123, 5),
+    (0.000001, '1.00000e-06', 1e-6, 5),
+    (0.0000001, '1.00000e-07', 1e-6, 5),
+    (0.0000000000000000000123, '1.2300e-20', 1e-6, 4),
+    (0.000075e-10, '7.5000000e-15', 1e-6, 7),
+    (1234567890e-50, '1.2345679e-41', 1e-6, 7),
+    (0.000123, '1.23000e-04', 1e-1, 5),
+    (0.000123, '1.23000e-04', 1e-2, 5),
+    (0.000123, '1.23000e-04', 1e-3, 5),
+    (0.000123, '1.23000e-04', 0.000124, 5),
+    (0.000123, '1.23000e-04', 0.000123, 5),
     (0.000123, '0.00012300', 0.000122, 5),
     (0.000123, '0.00012300', 1e-4, 5),
     (0.000123, '0.00012300', 1e-5, 5),
     (0.0000000000123, '0.0000000000123', 1e-20, None),
-    (0.00012345, '1e-04', 1e-1, 1),
-    (0.00012345, '1.2e-04', 1e-1, 2),
-    (0.00012345, '1.23e-04', 1e-1, 3),
-    (0.00012345, '1.234e-04', 1e-1, 4),
-    (0.00012345, '1.2345e-04', 1e-1, 5),
-    (0.00012345, '1.23450e-04', 1e-1, 6),
-    (0.00012345, '1.234500e-04', 1e-1, 7),
-    (0.00012345, '1.234500000e-04', 1e-1, 10),
-    (0.00012345, '1.23450000000000e-04', 1e-1, 15),
+    (0.00012345, '1.2e-04', 1e-1, 1),
+    (0.00012345, '1.23e-04', 1e-1, 2),
+    (0.00012345, '1.234e-04', 1e-1, 3),
+    (0.00012345, '1.2345e-04', 1e-1, 4),
+    (0.00012345, '1.23450e-04', 1e-1, 5),
+    (0.00012345, '1.234500e-04', 1e-1, 6),
+    (0.00012345, '1.2345000000e-04', 1e-1, 10),
+    (0.00012345, '1.234500000000000e-04', 1e-1, 15),
     (0.00012345, '0.000123450000000000', 1e-20, 15),
     (0.00012345, '1.2345e-04', 1e-1, None),
     (0.00012345, '0.00012345', 1e-10, None),
@@ -786,7 +779,7 @@ cases_exponent_small_number_sig_fig_expanded = (
 
 @pytest.mark.parametrize(
     'num, expected, threshold, sig_fig',
-    cases_exponent_small_number_sig_fig,
+    cases_exponent_small_number_sig_fig_expanded,
 )
 def test_readableNumber_exponent_small_number_sig_fig(
         num: Union[float, int],
@@ -798,6 +791,46 @@ def test_readableNumber_exponent_small_number_sig_fig(
         num=num,
         use_exponent_for_small_numbers=True,
         small_number_threshold=threshold,
+        significant_figures_after_decimal_point=sig_fig,
+    )
+    assert str(number) == expected
+
+
+cases_exponent_large_number_sig_fig = [
+    (123456789, '1.2e+08', 1e6, 1),
+    (123456789, '1.23e+08', 1e6, 2),
+    (123456789, '1.235e+08', 1e6, 3),
+    (123456789, '1.2346e+08', 1e6, 4),
+    (123456789, '123,456,789', 1e50, 4),
+    (123456789.123456, '1.2e+08', 1e6, 1),
+    (123456789.123456, '1.23e+08', 1e6, 2),
+    (123456789.123456, '1.235e+08', 1e6, 3),
+    (123456789.123456, '1.2346e+08', 1e6, 4),
+]
+
+cases_exponent_large_number_sig_fig_expanded = (
+    [(-a, '-' + b, c, d) for a, b, c, d in cases_exponent_large_number_sig_fig]
+    + [(+a, b, c, d) for a, b, c, d in cases_exponent_large_number_sig_fig]
+    + [
+        (0, '0', 1e-6, 6),
+        (1.123e-999, '0', 1e6, None),
+    ]
+)
+
+@pytest.mark.parametrize(
+    'num, expected, threshold, sig_fig',
+    cases_exponent_large_number_sig_fig_expanded,
+)
+def test_readableNumber_exponent_large_number_sig_fig(
+        num: Union[float, int],
+        expected: str,
+        threshold: int,
+        sig_fig: int,
+) -> None:
+    number = ReadableNumber(
+        num=num,
+        use_exponent_for_large_numbers=True,
+        large_number_threshold=threshold,
         significant_figures_after_decimal_point=sig_fig,
     )
     assert str(number) == expected

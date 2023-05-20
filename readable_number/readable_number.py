@@ -300,7 +300,7 @@ class ReadableNumber:
 
         if self.significant_figures_after_decimal_point is not None:
             sig_fig = self.significant_figures_after_decimal_point
-            return f'{self.num:.{sig_fig - 1}e}'
+            return f'{self.num:.{sig_fig}e}'
 
         temp_result = f'{self.num:.16e}'  # 16: max precision in 64-bit system
         base_part_str, exp_part_str = temp_result.split('e')
