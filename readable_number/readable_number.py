@@ -77,15 +77,13 @@ class ReadableNumber:
         given number has more than 15 digits after the decimal point,
         only the first 15 digits will be preserved due to the limit of
         the double-precision system.
-    significant_figures : Optional[int]
-        How many significant figures to display. "Significant figures"
-        and "precision" are different concepts.  Please refer to
-        https://en.wikipedia.org/wiki/Significant_figures for more details.
-        If one of ``precision`` and ``significant_figures`` is not ``None``,
-        the other must be ``None``.  If both are ``None``, the given number
-        will be printed in a "natural" way.
-    apply_sig_fig_only_to_numbers_less_than_1 : bool
-        Apm
+    significant_figures_after_decimal_point : Optional[int]
+        How many significant figures to display after the decimal point.
+        "Significant figures" and "precision" are different concepts.  Please
+        refer to https://en.wikipedia.org/wiki/Significant_figures for more
+        details. If one of ``precision`` and ``significant_figures`` is not
+        ``None``, the other must be ``None``.  If both are ``None``, the given
+        number will be printed in a "natural" way.
     show_decimal_part_if_integer : bool
         Whether to show the decimal part if the given number is an integer.
         If this is false, it overrides ``precision``.  If this is true,
@@ -125,8 +123,7 @@ class ReadableNumber:
             digit_group_delimiter: str = ',',
             decimal_symbol: str = '.',
             precision: Optional[int] = None,
-            significant_figures: Optional[int] = None,
-            apply_sig_fig_only_to_numbers_less_than_1: bool = True,
+            significant_figures_after_decimal_point: Optional[int] = None,
             show_decimal_part_if_integer: bool = False,
             use_shortform: bool = False,
             use_exponent_for_large_numbers: bool = False,
@@ -139,9 +136,8 @@ class ReadableNumber:
         self.digit_group_delimiter = digit_group_delimiter
         self.decimal_symbol = decimal_symbol
         self.precision = precision
-        self.significant_figures = significant_figures
-        self.apply_sig_fig_only_to_numbers_less_than_1 = (
-            apply_sig_fig_only_to_numbers_less_than_1
+        self.significant_figures_after_decimal_point = (
+            significant_figures_after_decimal_point
         )
         self.show_decimal_part_if_integer = show_decimal_part_if_integer
         self.use_shortform = use_shortform
@@ -167,21 +163,6 @@ class ReadableNumber:
 
         if not math.isfinite(self.num):
             return str(self.num)
-
-        # We need to put this before self.use_exponent_for_small_numbers
-        # and self.use_exponent_for_large_numbers, because when we show
-        # very large/small numbers as exponents, we want to control
-        # the significant digits in the result.
-        if (
-            self.significant_figures is not None
-            and not self.apply_sig_fig_only_to_numbers_less_than_1
-            and math.fabs(self.num) >= 1
-        ):
-            rn_copy = self.deepcopy()  # to inherit all original configs
-            rn_copy.num = float(f'{self.num:.{self.significant_figures}g}')
-            rn_copy.significant_figures = None  # to prevent infinite recursion
-            naturally_rendered: str = str(rn_copy)  # sig_fig and prec are both None
-            return self._post_process_significant_figures(naturally_rendered)
 
         if (
             self.use_exponent_for_small_numbers
@@ -281,19 +262,25 @@ class ReadableNumber:
             msg = '`precision` not None and not int'
             raise TypeError(msg)
 
-        if self.precision is not None and self.significant_figures is not None:
+        if (
+            self.precision is not None
+            and self.significant_figures_after_decimal_point is not None
+        ):
             raise ValueError(
-                'Only one of `precision` and `significant_figures` can be non-None.'
+                'Only one of `precision` and'
+                ' `significant_figures_after_decimal_point` can be non-None.'
             )
 
         if self.precision is not None and self.precision < 0:
             raise ValueError('`precision` should >= 0')
 
         if (
-            self.significant_figures is not None
-            and self.significant_figures <= 0
+            self.significant_figures_after_decimal_point is not None
+            and self.significant_figures_after_decimal_point <= 0
         ):
-            raise ValueError('`significant_figures` should > 0')
+            raise ValueError(
+                '`significant_figures_after_decimal_point` should > 0'
+            )
 
         if not isinstance(self.show_decimal_part_if_integer, bool):
             raise TypeError('`show_decimal_part_if_integer` not a boolean')
@@ -311,8 +298,9 @@ class ReadableNumber:
         if self.precision is not None:
             return f'{self.num:.{self.precision}e}'
 
-        if self.significant_figures is not None:
-            return f'{self.num:.{self.significant_figures - 1}e}'
+        if self.significant_figures_after_decimal_point is not None:
+            sig_fig = self.significant_figures_after_decimal_point
+            return f'{self.num:.{sig_fig - 1}e}'
 
         temp_result = f'{self.num:.16e}'  # 16: max precision in 64-bit system
         base_part_str, exp_part_str = temp_result.split('e')
@@ -327,11 +315,23 @@ class ReadableNumber:
         tier = min(tier, MAX_TIER)
         unit_name = METRIC_PREFIX_LOOKUP[tier]
 
-        prec_: int = 0 if self.precision is None else self.precision
+        prec_: int
+        if (
+            self.precision is None
+            and self.significant_figures_after_decimal_point is None
+        ):
+            prec_ = 0
+        elif self.precision is not None:
+            prec_ = self.precision
+        elif self.significant_figures_after_decimal_point is not None:
+            prec_ = self.significant_figures_after_decimal_point
+        else:
+            raise _InternalError('This should not have happened')
+
         nn: int = min(prec_, MAX_DIGITS_IN_DOUBLE_PRECISION)
         float_part = round(
             self.num / 10 ** (tier * 3),
-            ndigits=self.precision,
+            ndigits=prec_,
         )
         float_part_str = '{:.{prec}f}'.format(
             float_part,
@@ -386,7 +386,7 @@ class ReadableNumber:
 
         method: _DecimalPartRenderingMethod
 
-        if self.significant_figures is not None:
+        if self.significant_figures_after_decimal_point is not None:
             if math.fabs(self.num) >= 1:  # type: ignore[arg-type]
                 # This means `self.significant_figures` has no effect,
                 # because |num| ≥ 1
@@ -405,7 +405,8 @@ class ReadableNumber:
 
         if _DecimalPartRenderingMethod.SIGNIFICANT_FIGURES == method:
             _num: float = self.num_parts.decimal_part_float  # shorthand
-            rounded_str = f'{_num:.{self.significant_figures}g}'
+            sig_fig = self.significant_figures_after_decimal_point
+            rounded_str = f'{_num:.{sig_fig}g}'
 
             if 'e' not in rounded_str:
                 decimal_part = rounded_str.split('.')[1]
@@ -442,7 +443,10 @@ class ReadableNumber:
         return self._post_process_decimal_part(decimal_part, carry)
 
     def _sanity_check_for_render_decimal_part(self) -> None:
-        if self.precision is not None and self.significant_figures is not None:
+        if (
+            self.precision is not None
+            and self.significant_figures_after_decimal_point is not None
+        ):
             raise _InternalError(f'Both cannot be non-None. {MSG_CONTACT_US}')
 
     def _post_process_decimal_part(
@@ -454,8 +458,11 @@ class ReadableNumber:
 
         if self.precision is not None:
             precision_ = self.precision
-        elif self.significant_figures is not None:
-            precision_ = self.significant_figures + self.num_parts.multiplier
+        elif self.significant_figures_after_decimal_point is not None:
+            precision_ = (
+                self.significant_figures_after_decimal_point
+                + self.num_parts.multiplier
+            )
         else:
             precision_ = None
 
@@ -479,20 +486,6 @@ class ReadableNumber:
 
     def _is_integer(self) -> bool:
         return int(self.num) == self.num  # type: ignore[arg-type]
-
-    def _post_process_significant_figures(self, string: str) -> str:
-        existing_sig_figs: int = sum(map(self._is_sig, string.split('e')[0]))
-        if self.significant_figures is None:
-            raise _InternalError('self.significant_figures should not be None')
-
-        if existing_sig_figs > self.significant_figures:
-            raise _InternalError('This should not have happened')
-
-        if self._is_integer():
-            return string
-
-        diff: int = self.significant_figures - existing_sig_figs
-        return string + '0' * diff
 
     @classmethod
     def _is_sig(cls, char: str) -> bool:

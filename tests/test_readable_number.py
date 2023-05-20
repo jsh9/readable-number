@@ -610,20 +610,18 @@ def test_readableNumber_exponent_small_number_prec(
 
 
 test_cases_sig_figure = [
-    (1234567, '1,230,000', 3, {}),
-    (1234567.890123, '1,230,000', 3, {}),
-    (1234567, '1,23,00,00', 3, {'digit_group_size': 2}),
-    (1234567, '1|230|000', 3, {'digit_group_delimiter': '|'}),
-    (1234_45678, '123M', 4, {'use_shortform': True}),
-    (1234_45678, '123M', 4, {'use_shortform': True}),
-    (1234_56789, '123M', 6, {'use_shortform': True}),
-    (1234_56789, '123M', 6, {'use_shortform': True}),
-    (1234_56789, '123M', 5, {'use_shortform': True}),
-    (1234_56789, '124M', 4, {'use_shortform': True}),
-    (1234_56789, '123M', 3, {'use_shortform': True}),
-    (1234_56789, '120M', 2, {'use_shortform': True}),
-    (1234_56789, '100M', 1, {'use_shortform': True}),
-    (1234_56789, '124M', 4, {'use_shortform': True}),
+    (1234567, '1,234,567', 3, {}),
+    (1234567.890123, '1,234,567.890', 3, {}),
+    (1234567, '1,23,45,67', 3, {'digit_group_size': 2}),
+    (1234567, '1|234|567', 3, {'digit_group_delimiter': '|'}),
+    (1234_45678, '123.4457M', 4, {'use_shortform': True}),
+    (1234_56789, '123.456789M', 6, {'use_shortform': True}),
+    (1234_56789, '123.45679M', 5, {'use_shortform': True}),
+    (1234_56789, '123.4568M', 4, {'use_shortform': True}),
+    (1234_56789, '123.457M', 3, {'use_shortform': True}),
+    (1234_56789, '123.46M', 2, {'use_shortform': True}),
+    (1234_56789, '123.5M', 1, {'use_shortform': True}),
+    (1_234_567_890, '1.23B', 2, {'use_shortform': True}),
     (
         1234_56789,
         '1.235e+08',
@@ -642,16 +640,15 @@ test_cases_sig_figure = [
         5,
         {'use_exponent_for_large_numbers': True},
     ),
-    (1.23456, '1', 1, {}),
-    (1.23456, '1.2', 2, {}),
-    (1.23456, '1.23', 3, {}),
-    (1.23456, '1.235', 4, {}),
-    (1.23456, '1.2346', 5, {}),
-    (1.23456, '1.23456', 6, {}),
-    (1.23456, '1.234560', 7, {}),
-    (1.23456, '1.2345600', 8, {}),
-    (1.23456, '1.23456000', 9, {}),
-    (1.23456, '1.23456000000000', 15, {}),
+    (1.23456, '1.2', 1, {}),
+    (1.23456, '1.23', 2, {}),
+    (1.23456, '1.235', 3, {}),
+    (1.23456, '1.2346', 4, {}),
+    (1.23456, '1.23456', 5, {}),
+    (1.23456, '1.234560', 6, {}),
+    (1.23456, '1.2345600', 7, {}),
+    (1.23456, '1.23456000', 8, {}),
+    (1.23456, '1.234560000000000', 15, {}),
     (0.123456, '0.1', 1, {}),
     (0.123456, '0.12', 2, {}),
     (0.123456, '0.123', 3, {}),
@@ -730,15 +727,14 @@ test_cases_significant_figure_expanded = [
     'num, expected, sig_fig, other_options',
     test_cases_significant_figure_expanded,
 )
-def test_significant_number__apply_sig_fig_only_to_numbers_less_than_1_False(
+def test_significant_number(
         num: Union[float, int],
         expected: str,
         sig_fig: bool,
         other_options: Dict[str, Any],
 ) -> None:
     rn = ReadableNumber(
-        significant_figures=sig_fig,
-        apply_sig_fig_only_to_numbers_less_than_1=False,
+        significant_figures_after_decimal_point=sig_fig,
         **other_options,
     )
     assert rn.of(num) == expected
@@ -790,7 +786,6 @@ cases_exponent_small_number_sig_fig_expanded = (
 
 @pytest.mark.parametrize(
     'num, expected, threshold, sig_fig',
-    # cases_exponent_small_number_sig_fig_expanded,
     cases_exponent_small_number_sig_fig,
 )
 def test_readableNumber_exponent_small_number_sig_fig(
@@ -803,7 +798,7 @@ def test_readableNumber_exponent_small_number_sig_fig(
         num=num,
         use_exponent_for_small_numbers=True,
         small_number_threshold=threshold,
-        significant_figures=sig_fig,
+        significant_figures_after_decimal_point=sig_fig,
     )
     assert str(number) == expected
 
