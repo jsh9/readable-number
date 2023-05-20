@@ -14,7 +14,6 @@ This library does not depend on any third-party libraries, so installing it will
 
 ### 2.1. Import and basic usage
 
-
 ```python
 from readable_number import ReadableNumber
 
@@ -34,7 +33,6 @@ rn.of(1e15)  # 1000,0000,0000,0000
 ### 2.2. Print large integers
 
 #### 2.2.1. Print in groups
-
 
 ```python
 str(ReadableNumber(-123))  # -123

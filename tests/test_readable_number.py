@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Union, Type
+from typing import Any, Dict, Optional, Type, Union
 
 import pytest
 
@@ -816,6 +816,7 @@ cases_exponent_large_number_sig_fig_expanded = (
         (1.123e-999, '0', 1e6, None),
     ]
 )
+
 
 @pytest.mark.parametrize(
     'num, expected, threshold, sig_fig',
