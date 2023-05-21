@@ -1,4 +1,4 @@
 from readable_number.readable_number import ReadableNumber
 
-
-__version__ = 'v0.1.2'
+__all__ = ['ReadableNumber']
+__version__ = 'v0.1.3'
